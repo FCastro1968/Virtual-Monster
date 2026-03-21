@@ -4119,26 +4119,8 @@ function _renderDetailPanel(c) {
       list.appendChild(more);
     }
   } else if (c.submissions > 0) {
-    // Fallback dummy rows — not clickable, no scans
-    const fakeGrades = [c.grade, 'PSA 6', 'SGC 5', 'PSA 4.5', 'SGC 4'].slice(0, Math.min(c.submissions, 5));
-    const fakeCollectors = [c.collector, 'factory25_fan', 'sweet_cap_sam', 'the_uzit_man', 'cycle_350_kid'];
-    fakeGrades.forEach((g, i) => {
-      const row = document.createElement('div');
-      row.className = 'submission-row';
-      row.innerHTML = `
-        <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
-        <span class="sub-collector">${fakeCollectors[i]}</span>
-        <span class="sub-cert">cert #${Math.floor(10000000+Math.random()*89999999)}</span>
-        <span class="sub-grade">${g}</span>
-      `;
-      list.appendChild(row);
-    });
-    if (c.submissions > 5) {
-      const more = document.createElement('div');
-      more.style.cssText = 'font-family:"Courier Prime",monospace;font-size:0.65rem;color:var(--text-secondary);padding:0.5rem 0;text-align:center;';
-      more.textContent = `+ ${c.submissions - 5} more submissions`;
-      list.appendChild(more);
-    }
+    // Real data is loading from Supabase — show a placeholder
+    list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);padding:1rem 0;font-style:italic;">Loading submissions…</p>';
   } else {
     list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);padding:1rem 0;font-style:italic;">No submissions yet for this combination. Be the first to document it.</p>';
   }
@@ -5306,269 +5288,194 @@ async function loadAttestedFromSupabase() {
 loadRecentConfirmedFromSupabase();
 loadAttestedFromSupabase();
 
-// ── CONTRIBUTORS DATA ──
-const CONTRIBUTORS_DATA = {
-  all: {
-    cards: [
-      { handle:'backrun_bill',      sub:'Tom V. · Net54 member since 2009', cards:312, topGrade:'PSA 8' },
-      { handle:'sweet_cap_sam',  sub:'R. Alderman · Confirmed HOF specialist', cards:287, topGrade:'PSA 7' },
-      { handle:'broadleaf_bob',  sub:'Net54 member · tobacco backs focus', cards:241, topGrade:'SGC 7' },
-      { handle:'dusty_deadball',     sub:'Southern League & minor brand specialist', cards:198, topGrade:'PSA 6' },
-      { handle:'the_uzit_man',  sub:'Factory back researcher', cards:174, topGrade:'SGC 6' },
-      { handle:'piedmont_poet',    sub:'Piedmont series completionist', cards:163, topGrade:'PSA 7' },
-      { handle:'cycle_350_kid',   sub:'Grade-focused collector', cards:149, topGrade:'BGS 7' },
-      { handle:'factory25_fan',     sub:'Back variant hunter · SC specialist', cards:138, topGrade:'PSA 6' },
-      { handle:'sovereign_sue',     sub:'Documentation-first collector', cards:112, topGrade:'SGC 5' },
-      { handle:'no_slab_needed',   sub:'Raw submission contributor', cards:97,  topGrade:'Raw' },
-    ],
-    finest: [
-      { handle:'backrun_bill',      sub:'12 combinations held at Finest Known', finest:12, note:'Incl. Wagner / SC 350' },
-      { handle:'sweet_cap_sam',  sub:'HOF players, high grade focus', finest:9,  note:'7× PSA 7 or above' },
-      { handle:'broadleaf_bob',  sub:'Rare back specialist', finest:8,  note:'4× SGC 7 on scarce backs' },
-      { handle:'the_uzit_man',  sub:'Factory 25 & 42 documentation', finest:6,  note:'All graded PSA/SGC' },
-      { handle:'cycle_350_kid',   sub:'Premium grade submissions', finest:5,  note:'BGS 7 finest on 2' },
-      { handle:'piedmont_poet',    sub:'Piedmont 150 & 350 specialist', finest:4,  note:'3× Piedmont finest' },
-      { handle:'dusty_deadball',     sub:'Minor brand researcher', finest:4,  note:'Old Mill, Drum, Cycle' },
-      { handle:'factory25_fan',     sub:'SC series focus', finest:3,  note:'2× Sweet Caporal finest' },
-      { handle:'sovereign_sue',     sub:'Careful documentation', finest:2,  note:'Tolstoi, El Principe' },
-      { handle:'raw_and_real',    sub:'Raw submissions, verified scans', finest:1,  note:'Attested finest on 1' },
-    ],
-    newcombo: [
-      { handle:'dusty_deadball',     sub:'Southern League backs researcher', new:24, note:'Incl. 6 Old Mill SL finds' },
-      { handle:'backrun_bill',      sub:'Systematic catalog contributor', new:18, note:'3 previously unknown backs' },
-      { handle:'broadleaf_bob',  sub:'Deep back variant focus', new:15, note:'Lenox & Drum discoveries' },
-      { handle:'sovereign_sue',     sub:'Literature cross-reference specialist', new:12, note:'Tolstoi, EPdG combos' },
-      { handle:'sweet_cap_sam',  sub:'HOF player variant hunter', new:9,  note:'4 HOF new combos in 2024' },
-      { handle:'the_uzit_man',  sub:'Factory print research', new:8,  note:'SC Fac. 649 finds' },
-      { handle:'factory25_fan',     sub:'Active submission contributor', new:7,  note:'Brown Hindu variants' },
-      { handle:'piedmont_poet',    sub:'Piedmont completionist', new:5,  note:'Apple Green sovereign' },
-      { handle:'raw_and_real',    sub:'Raw documentation focus', new:4,  note:'All attested status' },
-      { handle:'cycle_350_kid',   sub:'Grade-up submissions', new:3,  note:'2 Carolina Brights finds' },
-    ],
-  },
-  year: {
-    cards: [
-      { handle:'sweet_cap_sam',  sub:'HOF player specialist', cards:84, topGrade:'PSA 7' },
-      { handle:'dusty_deadball',     sub:'Minor brand researcher', cards:71, topGrade:'PSA 6' },
-      { handle:'backrun_bill',      sub:'Systematic contributor', cards:67, topGrade:'PSA 8' },
-      { handle:'sovereign_sue',     sub:'Documentation-first', cards:55, topGrade:'SGC 5' },
-      { handle:'factory25_fan',     sub:'SC back specialist', cards:48, topGrade:'PSA 6' },
-      { handle:'broadleaf_bob',  sub:'Rare back focus', cards:41, topGrade:'SGC 7' },
-      { handle:'cycle_350_kid',   sub:'Premium grades', cards:38, topGrade:'BGS 7' },
-      { handle:'raw_and_real',    sub:'Raw submissions', cards:29, topGrade:'Raw' },
-      { handle:'the_uzit_man',  sub:'Factory back research', cards:24, topGrade:'SGC 6' },
-      { handle:'piedmont_poet',    sub:'Piedmont series', cards:18, topGrade:'PSA 7' },
-    ],
-    finest: [
-      { handle:'sweet_cap_sam',  sub:'HOF focus this year', finest:4, note:'3× new Finest Known' },
-      { handle:'backrun_bill',      sub:'Systematic contributions', finest:3, note:'Upgraded 3 prior entries' },
-      { handle:'dusty_deadball',     sub:'Minor brand finds', finest:3, note:'2 first-ever Finest' },
-      { handle:'sovereign_sue',     sub:'Rare back documentation', finest:2, note:'Tolstoi Finest this year' },
-      { handle:'cycle_350_kid',   sub:'Premium graded focus', finest:2, note:'BGS 7 on EPdG' },
-      { handle:'factory25_fan',     sub:'SC series specialist', finest:1, note:'SC 460 Finest Known' },
-      { handle:'broadleaf_bob',  sub:'Lenox finds 2025', finest:1, note:'Black Lenox Finest Known' },
-      { handle:'raw_and_real',    sub:'Attested contributors', finest:1, note:'Attested Finest' },
-      { handle:'the_uzit_man',  sub:'Factory 42 research', finest:1, note:'SC 350-460/42 find' },
-      { handle:'piedmont_poet',    sub:'Piedmont Apple Green', finest:1, note:'Sovereign Apple Green' },
-    ],
-    newcombo: [
-      { handle:'dusty_deadball',     sub:'Most active researcher 2025', new:9, note:'4 Old Mill SL combos' },
-      { handle:'sovereign_sue',     sub:'Cross-reference specialist', new:7, note:'EPdG & Tolstoi finds' },
-      { handle:'backrun_bill',      sub:'Systematic documentation', new:5, note:'3 Brown Hindu combos' },
-      { handle:'sweet_cap_sam',  sub:'HOF variant hunter', new:4, note:'All HOF new combos' },
-      { handle:'broadleaf_bob',  sub:'Lenox & Drum focus', new:3, note:'2 Lenox discoveries' },
-      { handle:'raw_and_real',    sub:'Raw documentation', new:3, note:'All attested' },
-      { handle:'factory25_fan',     sub:'SC variant research', new:2, note:'SC 150/649 finds' },
-      { handle:'the_uzit_man',  sub:'Factory print research', new:2, note:'Fac. 42 OP variants' },
-      { handle:'cycle_350_kid',   sub:'Premium submissions', new:1, note:'Carolina Brights find' },
-      { handle:'piedmont_poet',    sub:'Piedmont series', new:1, note:'Apple Green confirmation' },
-    ],
-  },
-  '90': {
-    cards: [
-      { handle:'dusty_deadball',     sub:'Active contributor', cards:28, topGrade:'PSA 6' },
-      { handle:'backrun_bill',      sub:'Recent finds', cards:22, topGrade:'PSA 8' },
-      { handle:'sweet_cap_sam',  sub:'HOF submissions', cards:19, topGrade:'PSA 7' },
-      { handle:'sovereign_sue',     sub:'Documentation pace', cards:14, topGrade:'SGC 5' },
-      { handle:'raw_and_real',    sub:'Raw submissions', cards:11, topGrade:'Raw' },
-      { handle:'factory25_fan',     sub:'SC submissions', cards:9,  topGrade:'PSA 6' },
-      { handle:'broadleaf_bob',  sub:'Rare back finds', cards:8,  topGrade:'SGC 7' },
-      { handle:'piedmont_poet',    sub:'Piedmont focus', cards:6,  topGrade:'PSA 7' },
-      { handle:'cycle_350_kid',   sub:'Grade submissions', cards:5,  topGrade:'BGS 7' },
-      { handle:'the_uzit_man',  sub:'Factory research', cards:4,  topGrade:'SGC 6' },
-    ],
-    finest: [
-      { handle:'backrun_bill',      sub:'Recent upgrades', finest:2, note:'2 new Finest Known in 90 days' },
-      { handle:'dusty_deadball',     sub:'Minor brand finds', finest:2, note:'Old Mill SL Finest' },
-      { handle:'sweet_cap_sam',  sub:'HOF upgrades', finest:1, note:'Cobb Piedmont 150 Finest' },
-      { handle:'raw_and_real',    sub:'Attested finest', finest:1, note:'Attested category' },
-      { handle:'broadleaf_bob',  sub:'Lenox Finest this quarter', finest:1, note:'Black Lenox' },
-      { handle:'sovereign_sue',     sub:'Tolstoi Finest retained', finest:1, note:'Held since Q1' },
-      { handle:'factory25_fan',     sub:'SC retained', finest:1, note:'SC 460 retained' },
-      { handle:'cycle_350_kid',   sub:'BGS entry', finest:1, note:'EPdG BGS 7' },
-      { handle:'piedmont_poet',    sub:'Apple Green', finest:1, note:'Sovereign Apple Green' },
-      { handle:'the_uzit_man',  sub:'Fac. 42 hold', finest:1, note:'SC 350-460/42' },
-    ],
-    newcombo: [
-      { handle:'dusty_deadball',     sub:'Most active this quarter', new:4, note:'2 previously unknown' },
-      { handle:'sovereign_sue',     sub:'Rapid documentation', new:3, note:'All graded submissions' },
-      { handle:'backrun_bill',      sub:'Systematic contributions', new:2, note:'Brown Hindu combo' },
-      { handle:'sweet_cap_sam',  sub:'HOF new finds', new:2, note:'2 HOF new combos' },
-      { handle:'raw_and_real',    sub:'Raw documentation', new:2, note:'Attested status' },
-      { handle:'factory25_fan',     sub:'SC finds', new:1, note:'SC 150/649' },
-      { handle:'broadleaf_bob',  sub:'Lenox discovery', new:1, note:'Black Lenox' },
-      { handle:'the_uzit_man',  sub:'Factory research', new:1, note:'Fac. 42 OP' },
-      { handle:'cycle_350_kid',   sub:'Carolina Brights', new:1, note:'First CBrights submit' },
-      { handle:'piedmont_poet',    sub:'Piedmont Apple Green', new:1, note:'Sovereign confirmation' },
-    ],
-  },
-  '30': {
-    cards: [
-      { handle:'backrun_bill',      sub:'Most active this month', cards:11, topGrade:'PSA 8' },
-      { handle:'dusty_deadball',     sub:'Minor brand focus', cards:9,  topGrade:'PSA 5' },
-      { handle:'sweet_cap_sam',  sub:'HOF submissions', cards:8,  topGrade:'PSA 7' },
-      { handle:'raw_and_real',    sub:'Raw documentation', cards:6,  topGrade:'Raw' },
-      { handle:'sovereign_sue',     sub:'Steady pace', cards:5,  topGrade:'SGC 5' },
-      { handle:'factory25_fan',     sub:'SC backs', cards:4,  topGrade:'PSA 6' },
-      { handle:'broadleaf_bob',  sub:'Rare finds', cards:3,  topGrade:'SGC 7' },
-      { handle:'piedmont_poet',    sub:'Piedmont series', cards:2,  topGrade:'PSA 7' },
-      { handle:'cycle_350_kid',   sub:'Grade submissions', cards:2,  topGrade:'BGS 7' },
-      { handle:'the_uzit_man',  sub:'Factory backs', cards:1,  topGrade:'SGC 5' },
-    ],
-    finest: [
-      { handle:'backrun_bill',      sub:'Top upgrade this month', finest:1, note:'Mathewson Dark Cap finest' },
-      { handle:'sweet_cap_sam',  sub:'HOF finest this month', finest:1, note:'Speaker Polar Bear' },
-      { handle:'broadleaf_bob',  sub:'Rare back finest', finest:1, note:'SGC 7 Lenox' },
-      { handle:'dusty_deadball',     sub:'Minor brand finest', finest:1, note:'Old Mill Southern League' },
-      { handle:'raw_and_real',    sub:'Attested finest', finest:1, note:'Raw category' },
-      { handle:'sovereign_sue',     sub:'Retained Tolstoi', finest:1, note:'No challenger this month' },
-      { handle:'factory25_fan',     sub:'SC 460 retained', finest:1, note:'No challenger' },
-      { handle:'cycle_350_kid',   sub:'EPdG BGS retained', finest:1, note:'No challenger' },
-      { handle:'piedmont_poet',    sub:'Apple Green hold', finest:1, note:'Sovereign' },
-      { handle:'the_uzit_man',  sub:'Fac. 42 hold', finest:1, note:'No challenger' },
-    ],
-    newcombo: [
-      { handle:'sweet_cap_sam',  sub:'Active new combo find', new:2, note:'2 HOF first submissions' },
-      { handle:'dusty_deadball',     sub:'Minor brand documentation', new:1, note:'Old Mill SL find' },
-      { handle:'backrun_bill',      sub:'New combo this month', new:1, note:'Cycle 460 variant' },
-      { handle:'sovereign_sue',     sub:'First EPdG entry', new:1, note:'EPdG combination' },
-      { handle:'raw_and_real',    sub:'Attested new combo', new:1, note:'Raw documentation' },
-      { handle:'factory25_fan',     sub:'SC discovery', new:1, note:'SC 150/649' },
-      { handle:'broadleaf_bob',  sub:'Rare back discovery', new:0, note:'—' },
-      { handle:'piedmont_poet',    sub:'Piedmont finds', new:0, note:'—' },
-      { handle:'cycle_350_kid',   sub:'Grade submissions', new:0, note:'—' },
-      { handle:'the_uzit_man',  sub:'Factory research', new:0, note:'—' },
-    ],
-  },
-};
-
-const MENTION_CONTRIBUTORS = [
-  { handle:'raw_and_real',     initial:'R', cards:97  },
-  { handle:'nineteen_oh_nine',      initial:'W', cards:74  },
-  { handle:'deadball_newbie',    initial:'D', cards:63  },
-  { handle:'the_archivist',  initial:'H', cards:58  },
-  { handle:'back_run_bob',        initial:'C', cards:52  },
-  { handle:'georgia_peach_fan',   initial:'T', cards:49  },
-  { handle:'fac_42_frank',         initial:'S', cards:41  },
-  { handle:'piedmont_collector',     initial:'P', cards:37  },
-  { handle:'sweet_cap_pete',       initial:'P', cards:35  },
-  { handle:'deadball_bronze',  initial:'B', cards:31  },
-  { handle:'old_mill_ollie',     initial:'O', cards:28  },
-  { handle:'cycle_chaser',      initial:'C', cards:24  },
-  { handle:'ashtray_archivist',     initial:'T', cards:22  },
-  { handle:'lenox_brown_bob',      initial:'L', cards:19  },
-  { handle:'polar_bear_pete',   initial:'P', cards:17  },
-  { handle:'hindu_red_hank',        initial:'H', cards:14  },
-  { handle:'uzit_or_lose_it',     initial:'U', cards:12  },
-  { handle:'drum_roll',     initial:'D', cards:9   },
-];
+// ── CONTRIBUTORS LEADERBOARD — Supabase-driven ──────────────
 
 const MEDALS = ['🥇','🥈','🥉'];
+let contribPeriod = 'all';
 
-function avatarInitial(handle) {
-  return handle[0].toUpperCase();
+// Returns a UTC ISO string for "N days ago", or null for all-time
+function periodCutoff(period) {
+  if (period === 'all') return null;
+  const days = period === 'year' ? 365 : parseInt(period);
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString();
 }
 
-function renderLeaderboard(boardId, data, valueKey, valueClass, valueSuffix, subKey) {
+async function loadContributors(period) {
+  // Show loading state in all three boards
+  ['lb-cards','lb-finest','lb-newcombo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div style="padding:1.5rem;text-align:center;font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</div>';
+  });
+
+  const cutoff = periodCutoff(period);
+
+  try {
+    // ── Cards submitted (confirmed, in period) ───────────────
+    let cardsQuery = db
+      .from('submissions')
+      .select('submitted_by, submitter:users!submitted_by ( handle )', { count: 'exact' })
+      .eq('status', 'confirmed');
+    if (cutoff) cardsQuery = cardsQuery.gte('submitted_at', cutoff);
+    const { data: cardRows } = await cardsQuery;
+
+    const cardCounts = {};
+    (cardRows || []).forEach(r => {
+      const h = r.submitter?.handle;
+      if (h) cardCounts[h] = (cardCounts[h] || 0) + 1;
+    });
+    const cardsData = Object.entries(cardCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([handle, count]) => ({ handle, count }));
+
+    // ── Finest Known held (is_finest_graded = true, all-time) ─
+    // "Finest Known held" is a snapshot — period doesn't filter it,
+    // it shows who currently holds the most finest-known slots.
+    const { data: finestRows } = await db
+      .from('submissions')
+      .select('submitted_by, submitter:users!submitted_by ( handle )')
+      .eq('is_finest_graded', true)
+      .eq('status', 'confirmed');
+
+    const finestCounts = {};
+    (finestRows || []).forEach(r => {
+      const h = r.submitter?.handle;
+      if (h) finestCounts[h] = (finestCounts[h] || 0) + 1;
+    });
+    const finestData = Object.entries(finestCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([handle, count]) => ({ handle, count }));
+
+    // ── New combos (first confirmed submission per player/back, in period) ──
+    // A "new combo" is a combination where the user's submission was the
+    // earliest confirmed one for that player+back pair.
+    let newComboQuery = db
+      .from('submissions')
+      .select('player, back, submitted_by, submitted_at, submitter:users!submitted_by ( handle )')
+      .eq('status', 'confirmed')
+      .order('submitted_at', { ascending: true });
+    if (cutoff) newComboQuery = newComboQuery.gte('submitted_at', cutoff);
+    const { data: newComboRows } = await newComboQuery;
+
+    // For each player+back, find the earliest confirmed submission overall
+    // (not just in period) to determine who "discovered" it
+    const { data: allFirstRows } = await db
+      .from('submissions')
+      .select('player, back, submitted_by, submitted_at, submitter:users!submitted_by ( handle )')
+      .eq('status', 'confirmed')
+      .order('submitted_at', { ascending: true });
+
+    const firstByCombo = {};
+    (allFirstRows || []).forEach(r => {
+      const key = r.player + '|' + r.back;
+      if (!firstByCombo[key]) firstByCombo[key] = r;
+    });
+
+    const newComboCounts = {};
+    Object.values(firstByCombo).forEach(r => {
+      // Only count if the first submission falls within the period
+      if (cutoff && r.submitted_at < cutoff) return;
+      const h = r.submitter?.handle;
+      if (h) newComboCounts[h] = (newComboCounts[h] || 0) + 1;
+    });
+    const newComboData = Object.entries(newComboCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([handle, count]) => ({ handle, count }));
+
+    // ── Mentions grid (all contributors with ≥1 confirmed sub) ─
+    const mentionsData = Object.entries(cardCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([handle, count]) => ({ handle, count }));
+
+    // ── Render ────────────────────────────────────────────────
+    renderLeaderboard('lb-cards',    cardsData,    'cards submitted',    'lb-val-cards');
+    renderLeaderboard('lb-finest',   finestData,   'finest known held',  'lb-val-finest');
+    renderLeaderboard('lb-newcombo', newComboData, 'new combos',         'lb-val-newcombo');
+    renderMentions(mentionsData);
+    updateContribStats(cardsData, finestData, newComboData);
+
+  } catch (err) {
+    ['lb-cards','lb-finest','lb-newcombo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<div style="padding:1.5rem;font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error: ${err.message}</div>`;
+    });
+  }
+}
+
+function renderLeaderboard(boardId, data, unit, valueClass) {
   const el = document.getElementById(boardId);
   if (!el) return;
   el.innerHTML = '';
+  if (!data.length) {
+    el.innerHTML = '<div style="padding:1.5rem;text-align:center;font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No submissions yet.</div>';
+    return;
+  }
   data.forEach((row, i) => {
     const rankNum = i + 1;
     const rankEl  = rankNum <= 3
       ? `<span class="rank-medal">${MEDALS[i]}</span>`
       : `<span class="lb-rank" style="color:var(--text-muted);">${rankNum}</span>`;
-    const value   = row[valueKey];
-    const displayVal = (valueKey === 'cards') ? value : (valueKey === 'finest') ? value : value;
-    const unit    = (valueKey === 'cards') ? 'cards' : (valueKey === 'finest') ? 'finest known' : 'new combos';
-    const noteLine = row.note ? `<span class="lb-value-sub">${row.note}</span>` : '';
-
     const div = document.createElement('div');
     div.className = `lb-row rank-${rankNum} ${valueClass}`;
     div.innerHTML = `
       ${rankEl}
       <div>
         <div class="lb-collector-name">${row.handle}</div>
-        <div class="lb-collector-sub">${row.sub}</div>
       </div>
       <div>
-        <div class="lb-value">${displayVal === 0 ? '—' : displayVal}</div>
-        ${displayVal > 0 ? noteLine || `<span class="lb-value-sub">${unit}</span>` : ''}
+        <div class="lb-value">${row.count}</div>
+        <span class="lb-value-sub">${unit}</span>
       </div>
     `;
     el.appendChild(div);
   });
 }
 
-function renderMentions() {
+function renderMentions(data) {
   const grid = document.getElementById('contrib-mentions-grid');
   if (!grid) return;
   grid.innerHTML = '';
-  MENTION_CONTRIBUTORS.forEach(m => {
+  if (!data || !data.length) {
+    grid.innerHTML = '<div style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No contributors yet.</div>';
+    return;
+  }
+  data.forEach(m => {
     const card = document.createElement('div');
     card.className = 'mention-card';
     card.innerHTML = `
-      <div class="mention-avatar">${m.initial}</div>
+      <div class="mention-avatar">${m.handle[0].toUpperCase()}</div>
       <div>
         <div class="mention-name">${m.handle}</div>
-        <div class="mention-count">${m.cards} submission${m.cards !== 1 ? 's' : ''}</div>
+        <div class="mention-count">${m.count} submission${m.count !== 1 ? 's' : ''}</div>
       </div>
     `;
     grid.appendChild(card);
   });
 }
 
-function updateContribStats(period) {
-  const d = CONTRIBUTORS_DATA[period];
-  const totalCards    = d.cards.reduce((s, r) => s + r.cards, 0);
-  const totalFinest   = d.finest.reduce((s, r) => s + r.finest, 0);
-  const totalNew      = d.newcombo.reduce((s, r) => s + r.new, 0);
-  const allHandles    = [...new Set([...d.cards, ...d.finest, ...d.newcombo].map(r => r.handle))];
-  document.getElementById('contrib-stat-total').textContent     = totalCards.toLocaleString();
-  document.getElementById('contrib-stat-collectors').textContent = allHandles.length + '+';
-  document.getElementById('contrib-stat-new').textContent       = totalNew;
+function updateContribStats(cardsData, finestData, newComboData) {
+  const totalCards  = cardsData.reduce((s, r) => s + r.count, 0);
+  const totalNew    = newComboData.reduce((s, r) => s + r.count, 0);
+  const allHandles  = new Set([...cardsData, ...finestData, ...newComboData].map(r => r.handle));
+  document.getElementById('contrib-stat-total').textContent      = totalCards.toLocaleString();
+  document.getElementById('contrib-stat-collectors').textContent = allHandles.size > 0 ? allHandles.size + '+' : '—';
+  document.getElementById('contrib-stat-new').textContent        = totalNew || '—';
 }
-
-function renderContributors(period) {
-  const d = CONTRIBUTORS_DATA[period];
-  renderLeaderboard('lb-cards',    d.cards,    'cards',  'lb-val-cards',    'cards', 'topGrade');
-  renderLeaderboard('lb-finest',   d.finest,   'finest', 'lb-val-finest',   'finest known', 'note');
-  renderLeaderboard('lb-newcombo', d.newcombo, 'new',    'lb-val-newcombo', 'new combos', 'note');
-  updateContribStats(period);
-  renderMentions();
-}
-
-let contribPeriod = 'all';
 
 function setContribPeriod(period, btn) {
   contribPeriod = period;
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  renderContributors(period);
+  loadContributors(period);
 }
 
-// initialise contributors on load (renders hidden, shown on nav click)
-renderContributors('all');
+// initialise contributors on load
+loadContributors('all');
 
 // ══════════════════════════════════════
 // FORUM
