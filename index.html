@@ -2694,6 +2694,16 @@
         <p class="filter-title">Filter &amp; Search</p>
 
         <div class="filter-group">
+          <label class="filter-label">Status</label>
+          <select id="status-filter" class="filter-select" onchange="filterTable()">
+            <option value="">All Statuses</option>
+            <option value="Confirmed">Confirmed (graded submission)</option>
+            <option value="Attested">Attested (raw submission only)</option>
+            <option value="Reported">Reported (checklist, no submission)</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
           <label class="filter-label">Player Name</label>
           <input class="filter-input" type="text" placeholder="e.g. Cobb, Wagner…" oninput="filterTable()">
         </div>
@@ -2771,16 +2781,6 @@
             <option value="350-460">Series 350-460</option>
             <option value="460">Series 460</option>
             <option value="Assorted">Assorted Backs</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label class="filter-label">Status</label>
-          <select id="status-filter" class="filter-select" onchange="filterTable()">
-            <option value="">All Statuses</option>
-            <option value="Confirmed">Confirmed (graded submission)</option>
-            <option value="Attested">Attested (raw submission only)</option>
-            <option value="Reported">Reported (checklist, no submission)</option>
           </select>
         </div>
 
