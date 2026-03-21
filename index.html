@@ -5559,88 +5559,73 @@ renderContributors('all');
 // ══════════════════════════════════════
 
 
-const FORUM_THREADS = {
-  general: [
-    {
-      id: 'g1', pinned: true, unread: false,
-      subject: 'Welcome to the Virtual Monster Forum — please read before posting',
-      preview: 'This forum exists to support the collaborative documentation of the T206 superset. A few ground rules before you dive in…',
-      author: 'admin', date: '2025-01-15', replies: 0, tags: [],
-      posts: [
-        { author:'admin', date:'2025-01-15', op:true, text:'<p>This forum exists to support the collaborative documentation of the T206 superset. A few ground rules before you dive in: keep discussions focused on T206 and related tobacco card research, cite sources where possible, and treat fellow collectors with respect.</p><p>Welcome, and happy hunting.</p>', likes:14 },
-      ],
-    },
-    {
-      id: 'sg1', pinned: true, unread: true,
-      subject: 'Suggestion Box — feature requests, checklist feedback, and improvements',
-      preview: 'Use this thread to suggest specific features, flag checklist issues, or propose policy changes. For general impressions and discussion of the demo, see the demo announcement thread…',
-      author: 'admin', date: '2026-03-14', replies: 3, tags: [],
-      posts: [
-        { author:'admin', date:'2026-03-14', op:true, text:'<p>Use this thread for specific, actionable suggestions: feature requests, checklist corrections, back identification edge cases, policy questions, or anything you\'d change about how the archive works.</p><p>For general impressions of the demo or broader discussion, the announcement thread is the better place. This one is meant to be a running log of concrete asks — the kind of thing that can be turned into a to-do list.</p><p>All suggestions will be read. Not all will be implemented, but anything that gets traction in the replies will be considered seriously.</p>', likes: 19 },
-        { author:'dusty_deadball', date:'2026-03-14', op:false, text:'<p>Would love a way to filter the checklist by "no submissions yet" — i.e. combinations that are Reported but have zero documented examples. That\'s where the hunting opportunities are. Makes it easy to see what\'s still genuinely undocumented.</p>', likes: 22 },
-        { author:'sweet_cap_sam', date:'2026-03-14', op:false, text:'<p>The qualifier grade deduction logic using the PSA Registry scale is solid, but it should be explained somewhere visible in the UI — not just in the About section. First time I saw a PSA 8(OC) ranked below a PSA 7 I thought it was a bug. A tooltip on the grade column would help.</p>', likes: 17 },
-        { author:'backrun_bill', date:'2026-03-14', op:false, text:'<p>The Bill Brown checklist is the right foundation but there are a handful of combinations in the Southern League section that the community has since reached rough consensus on as non-existent. Worth flagging those as a known-undocumented group rather than treating them as simply Reported.</p>', likes: 9 },
-      ],
-    },
-    {
-      id: 'an1', pinned: true, unread: false,
-      subject: 'Virtual Monster — read-only demo preview, now live for community feedback',
-      preview: 'We\'re sharing this demo build with the Net54 community to get feedback before opening submissions. The checklist, filters, and forum are fully functional. Submissions are not yet live…',
-      author: 'admin', date: '2026-03-14', replies: 5, tags: [],
-      posts: [
-        { author:'admin', date:'2026-03-14', op:true, text:'<p>We\'re sharing this demo build of the Virtual Monster with the T206 community to gather feedback before opening submissions to the public.</p><p>What\'s functional right now: the full 6,416-combination checklist with filtering by back, series, HOF status, and submission status; the Recent & Attested page; contributor leaderboards; and this forum. A small set of real documented cards has been added to demonstrate the submission and scan display functionality.</p><p>What\'s not yet live: actual submission processing, user accounts, and cert verification against PSA/SGC registries. Those require a backend that is in development.</p><p>Feedback welcome here or via Net54. Specifically looking for input on: checklist accuracy, missing combinations, policy questions, and UI issues. This community knows this material better than anyone and we want to get it right before launch.</p>', likes:42 },
-        { author:'sweet_cap_sam', date:'2026-03-14', op:false, text:'<p>The checklist accuracy and the Confirmed/Attested/Reported status hierarchy are both thoughtfully done. The decision to remove known no-prints rather than mark them theorized is the right call — keeps the data clean.</p>', likes:18 },
-        { author:'dusty_deadball', date:'2026-03-14', op:false, text:'<p>The qualifier grade deduction using the PSA Registry scale is a detail I wasn\'t expecting to see handled correctly. Good to know the ranking logic is sound before submissions open.</p>', likes:15 },
-        { author:'broadleaf_bob', date:'2026-03-14', op:false, text:'<p>One suggestion: the forum categories are good but a dedicated "Checklist Disputes" category would be useful once submissions open. There will be edge cases around back identification and series assignment that need a formal place to be resolved.</p>', likes:11 },
-        { author:'admin', date:'2026-03-14', op:false, text:'<p>Good call — adding that to the pre-launch list. The intent was always for the community to be the final word on difficult identification questions, so a dedicated category for that makes sense.</p>', likes:8 },
-      ],
-    },
-  ],
-};
+// ── FORUM STATE ──────────────────────────────────────────────
+// All thread/post data lives in Supabase. These are runtime caches only.
+let FORUM_THREAD_CACHE = [];   // flat array of thread rows from DB
+let currentForumCat   = 'all';
+let currentThread     = null;  // full thread object: { ...row, posts: [] }
+let forumLikes        = {};    // postId => true (session only; DB is source of truth)
 
-// forum state
-let currentForumCat = 'all';
-let currentThread   = null;
-let forumLikes      = {};  // track liked posts in session: 'threadId-authorIdx' => true
+// ── LOAD ─────────────────────────────────────────────────────
 
+async function loadForumThreads() {
+  const list = document.getElementById('forum-thread-list');
+  list.innerHTML = '<div style="padding:2rem;text-align:center;font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</div>';
+  try {
+    const { data, error } = await db
+      .from('forum_threads')
+      .select(`
+        id, subject, is_pinned, is_locked, reply_count, created_at, updated_at,
+        author:users!author_id ( handle )
+      `)
+      .order('is_pinned', { ascending: false })
+      .order('updated_at',  { ascending: false });
+    if (error) throw error;
+    FORUM_THREAD_CACHE = data || [];
+    renderForumThreadList();
+  } catch (err) {
+    list.innerHTML = `<div style="padding:2rem;text-align:center;font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error loading threads: ${err.message}</div>`;
+  }
+}
+
+async function loadThreadPosts(threadId) {
+  const { data, error } = await db
+    .from('forum_posts')
+    .select(`
+      id, body, like_count, is_op, created_at,
+      author:users!author_id ( handle )
+    `)
+    .eq('thread_id', threadId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+// ── RENDER THREAD LIST ────────────────────────────────────────
 
 function renderForumThreadList() {
-  // Flatten all threads from all categories into one list, pinned first then by date
-  const threads = Object.values(FORUM_THREADS).flat();
-  const list    = document.getElementById('forum-thread-list');
+  const list = document.getElementById('forum-thread-list');
   list.innerHTML = '';
-
-  if (!threads.length) {
-    list.innerHTML = '<div style="padding:2rem;text-align:center;font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No threads yet. Be the first to post in this category.</div>';
+  if (!FORUM_THREAD_CACHE.length) {
+    list.innerHTML = '<div style="padding:2rem;text-align:center;font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No threads yet. Be the first to post.</div>';
     return;
   }
-
-  // pinned first
-  const sorted = [...threads].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-  sorted.forEach(t => {
-    const tagHtml = t.tags.map(tag => {
-      const cls = tag === 'identification' ? 'tag-id' : tag === 'backs' ? 'tag-back' : tag === 'market' ? 'tag-value' : '';
-      return `<span class="thread-tag ${cls}">${tag}</span>`;
-    }).join('');
-
+  FORUM_THREAD_CACHE.forEach(t => {
+    const authorName = t.author?.handle || 'unknown';
     const row = document.createElement('div');
-    row.className = 'forum-thread-row' + (t.pinned ? ' pinned' : '');
+    row.className = 'forum-thread-row' + (t.is_pinned ? ' pinned' : '');
     row.onclick = () => openThread(t);
     row.innerHTML = `
       <div>
-        ${t.pinned ? '<div class="thread-pin">📌 Pinned</div>' : ''}
-        <div class="thread-subject">
-          ${t.unread ? '<span class="thread-unread-dot"></span>' : ''}${t.subject}
-        </div>
-        <div class="thread-preview">${t.preview}</div>
+        ${t.is_pinned ? '<div class="thread-pin">📌 Pinned</div>' : ''}
+        <div class="thread-subject">${escapeHtml(t.subject)}</div>
         <div class="thread-meta">
-          <span>By <strong>${t.author}</strong></span>
-          <span>${formatThreadDate(t.date)}</span>
-          ${tagHtml}
+          <span>By <strong>${escapeHtml(authorName)}</strong></span>
+          <span>${formatThreadDate(t.updated_at)}</span>
         </div>
       </div>
       <div class="thread-stats">
-        <div class="thread-reply-count">${t.replies}</div>
+        <div class="thread-reply-count">${t.reply_count}</div>
         <div class="thread-reply-label">replies</div>
       </div>
     `;
@@ -5648,89 +5633,105 @@ function renderForumThreadList() {
   });
 }
 
-function openThread(t) {
-  currentThread = t;
-  t.unread = false;  // mark read
+// ── OPEN THREAD ───────────────────────────────────────────────
 
+async function openThread(t) {
+  currentThread = t;
   document.getElementById('thread-detail-title').textContent = t.subject;
-  document.getElementById('thread-detail-meta').textContent =
-    `Posted by ${t.author} · ${formatThreadDate(t.date)} · ${t.replies} replies`;
+  document.getElementById('thread-detail-meta').textContent  = 'Loading…';
 
   const postList = document.getElementById('post-list');
-  postList.innerHTML = '';
-  t.posts.forEach((p, idx) => {
-    const likeKey  = t.id + '-' + idx;
-    const liked    = !!forumLikes[likeKey];
-    const likeCount = p.likes + (liked ? 0 : 0); // already counted in data
-    const postEl = document.createElement('div');
-    postEl.className = 'post' + (p.op ? ' op-post' : '');
-    postEl.id = 'post-' + t.id + '-' + idx;
-    postEl.innerHTML = `
-      <div class="post-avatar-col">
-        <div class="post-avatar${p.op ? ' op' : ''}">${p.author[0].toUpperCase()}</div>
-        <div class="post-handle">${p.author}</div>
-        <div class="post-post-count">${Math.floor(50 + Math.random()*400)} posts</div>
-      </div>
-      <div class="post-body-col">
-        <div class="post-header">
-          <span class="post-timestamp">${formatThreadDate(p.date)}</span>
-          ${p.op ? '<span class="post-op-badge">OP</span>' : ''}
-        </div>
-        <div class="post-text">${p.text}</div>
-        <div class="post-actions">
-          <button class="post-action-btn" onclick="toggleLike('${t.id}', ${idx})">
-            ${liked ? '♥' : '♡'} <span class="post-like-count" id="likes-${t.id}-${idx}">${p.likes}</span>
-          </button>
-          <button class="post-action-btn" onclick="quotePost('${t.id}', ${idx})">❝ Quote</button>
-          <button class="post-action-btn" onclick="document.getElementById('reply-textarea').focus()">↩ Reply</button>
-        </div>
-      </div>
-    `;
-    postList.appendChild(postEl);
-  });
+  postList.innerHTML = '<div style="padding:2rem;text-align:center;font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</div>';
 
   document.getElementById('forum-list-view').classList.add('hidden');
   document.getElementById('forum-thread-view').classList.add('open');
-  // scroll to top of thread
   document.getElementById('forum-thread-view').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // hide reply box on locked threads or when signed out
+  const replyBox = document.getElementById('reply-box');
+  if (replyBox) replyBox.style.display = (t.is_locked || !currentUser) ? 'none' : '';
+
+  try {
+    const posts = await loadThreadPosts(t.id);
+    const authorName = t.author?.handle || 'unknown';
+    document.getElementById('thread-detail-meta').textContent =
+      `Posted by ${authorName} · ${formatThreadDate(t.created_at)} · ${t.reply_count} replies`;
+
+    postList.innerHTML = '';
+    posts.forEach((p, idx) => {
+      const handle  = p.author?.handle || 'unknown';
+      const liked   = !!forumLikes[p.id];
+      const postEl  = document.createElement('div');
+      postEl.className = 'post' + (p.is_op ? ' op-post' : '');
+      postEl.id = 'post-' + p.id;
+      postEl.innerHTML = `
+        <div class="post-avatar-col">
+          <div class="post-avatar${p.is_op ? ' op' : ''}">${handle[0].toUpperCase()}</div>
+          <div class="post-handle">${escapeHtml(handle)}</div>
+        </div>
+        <div class="post-body-col">
+          <div class="post-header">
+            <span class="post-timestamp">${formatThreadDate(p.created_at)}</span>
+            ${p.is_op ? '<span class="post-op-badge">OP</span>' : ''}
+          </div>
+          <div class="post-text">${bodyToHtml(p.body)}</div>
+          <div class="post-actions">
+            <button class="post-action-btn" onclick="toggleLike('${p.id}')">
+              ${liked ? '♥' : '♡'} <span class="post-like-count" id="likes-${p.id}">${p.like_count}</span>
+            </button>
+            <button class="post-action-btn" onclick="quotePost('${p.id}', ${JSON.stringify(handle)}, ${JSON.stringify(p.body)})">❝ Quote</button>
+            ${!t.is_locked && currentUser ? `<button class="post-action-btn" onclick="document.getElementById('reply-textarea').focus()">↩ Reply</button>` : ''}
+          </div>
+        </div>
+      `;
+      postList.appendChild(postEl);
+    });
+  } catch (err) {
+    postList.innerHTML = `<div style="padding:2rem;font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error loading posts: ${err.message}</div>`;
+  }
 }
 
 function closeThread() {
   currentThread = null;
   document.getElementById('forum-list-view').classList.remove('hidden');
   document.getElementById('forum-thread-view').classList.remove('open');
-  renderForumThreadList();
+  loadForumThreads();
 }
 
-function toggleLike(threadId, postIdx) {
-  const key    = threadId + '-' + postIdx;
-  const thread = Object.values(FORUM_THREADS).flat().find(t => t.id === threadId);
-  if (!thread) return;
-  const post   = thread.posts[postIdx];
-  if (forumLikes[key]) {
-    forumLikes[key] = false;
-    post.likes--;
-  } else {
-    forumLikes[key] = true;
-    post.likes++;
-  }
-  const el = document.getElementById('likes-' + threadId + '-' + postIdx);
-  if (el) el.textContent = post.likes;
-  // update heart icon
+// ── LIKES ─────────────────────────────────────────────────────
+
+async function toggleLike(postId) {
+  if (!currentUser) { alert('Please sign in to like posts.'); return; }
+  const el  = document.getElementById('likes-' + postId);
   const btn = el ? el.closest('.post-action-btn') : null;
-  if (btn) btn.childNodes[0].textContent = forumLikes[key] ? '♥ ' : '♡ ';
+  if (forumLikes[postId]) {
+    // unlike
+    await db.from('post_likes').delete().match({ post_id: postId, user_id: currentUser.id });
+    await db.from('forum_posts').update({ like_count: (parseInt(el?.textContent || 0) - 1) }).eq('id', postId);
+    forumLikes[postId] = false;
+    if (el)  el.textContent = parseInt(el.textContent) - 1;
+    if (btn) btn.childNodes[0].textContent = '♡ ';
+  } else {
+    // like
+    await db.from('post_likes').upsert({ post_id: postId, user_id: currentUser.id });
+    await db.from('forum_posts').update({ like_count: (parseInt(el?.textContent || 0) + 1) }).eq('id', postId);
+    forumLikes[postId] = true;
+    if (el)  el.textContent = parseInt(el.textContent) + 1;
+    if (btn) btn.childNodes[0].textContent = '♥ ';
+  }
 }
 
-function quotePost(threadId, postIdx) {
-  const thread = Object.values(FORUM_THREADS).flat().find(t => t.id === threadId);
-  if (!thread) return;
-  const post   = thread.posts[postIdx];
-  const plain  = post.text.replace(/<[^>]+>/g, '').trim().slice(0, 200);
-  const ta     = document.getElementById('reply-textarea');
-  ta.value     = (ta.value ? ta.value + '\n\n' : '') + `> [${post.author}]: ${plain}…\n\n`;
+// ── QUOTE ─────────────────────────────────────────────────────
+
+function quotePost(postId, handle, body) {
+  const plain = body.replace(/<[^>]+>/g, '').trim().slice(0, 200);
+  const ta    = document.getElementById('reply-textarea');
+  ta.value    = (ta.value ? ta.value + '\n\n' : '') + `> [${handle}]: ${plain}…\n\n`;
   ta.focus();
   ta.setSelectionRange(ta.value.length, ta.value.length);
 }
+
+// ── FORMAT HELPERS ────────────────────────────────────────────
 
 function insertFormat(before, after) {
   const ta    = document.getElementById('reply-textarea');
@@ -5742,24 +5743,63 @@ function insertFormat(before, after) {
   ta.setSelectionRange(start + before.length, start + before.length + sel.length);
 }
 
-function submitReply() {
-  const ta   = document.getElementById('reply-textarea');
-  const text = ta.value.trim();
-  if (!text || !currentThread) return;
-  const htmlText = '<p>' + text.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
-  const newPost = { author: 'collector', date: new Date().toISOString().slice(0,10), op: false, text: htmlText, likes: 0 };
-  currentThread.posts.push(newPost);
-  currentThread.replies++;
-  ta.value = '';
-  openThread(currentThread);
-  // scroll to new post
-  setTimeout(() => {
-    const lastPost = document.getElementById('post-list').lastElementChild;
-    if (lastPost) lastPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 100);
+function bodyToHtml(text) {
+  // Plain text → safe HTML paragraphs (body stored as plain text in DB)
+  return '<p>' + escapeHtml(text).replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
 }
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── SUBMIT REPLY ──────────────────────────────────────────────
+
+async function submitReply() {
+  if (!currentUser) { alert('Please sign in to reply.'); return; }
+  if (!currentThread) return;
+  const ta   = document.getElementById('reply-textarea');
+  const text = ta.value.trim();
+  if (!text) return;
+
+  const btn = document.getElementById('reply-submit-btn');
+  if (btn) btn.disabled = true;
+
+  try {
+    const { error: postErr } = await db.from('forum_posts').insert({
+      thread_id: currentThread.id,
+      author_id: currentUser.id,
+      body:      text,
+      is_op:     false,
+    });
+    if (postErr) throw postErr;
+
+    // bump reply_count and updated_at on thread
+    await db.from('forum_threads')
+      .update({ reply_count: (currentThread.reply_count || 0) + 1, updated_at: new Date().toISOString() })
+      .eq('id', currentThread.id);
+
+    currentThread.reply_count = (currentThread.reply_count || 0) + 1;
+    ta.value = '';
+    await openThread(currentThread);
+    setTimeout(() => {
+      const lastPost = document.getElementById('post-list').lastElementChild;
+      if (lastPost) lastPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  } catch (err) {
+    alert('Error posting reply: ' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ── NEW THREAD MODAL ──────────────────────────────────────────
+
 function openNewThreadModal() {
+  if (!currentUser) { alert('Please sign in to start a thread.'); return; }
   document.getElementById('forum-modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -5770,37 +5810,50 @@ function closeNewThreadModal(e) {
   document.body.style.overflow = '';
 }
 
-function submitNewThread() {
-  const cat     = 'general';
+async function submitNewThread() {
+  if (!currentUser) { alert('Please sign in to start a thread.'); return; }
   const subject = document.getElementById('modal-subject').value.trim();
   const body    = document.getElementById('modal-body').value.trim();
-  const tagsRaw = document.getElementById('modal-tags').value.trim();
-  if (!subject || !body) {
-    alert('Please fill in the subject and message fields.');
-    return;
+  if (!subject || !body) { alert('Please fill in the subject and message fields.'); return; }
+
+  const btn = document.getElementById('modal-submit-btn');
+  if (btn) btn.disabled = true;
+
+  try {
+    // look up category_id for 'general'
+    const { data: cats } = await db.from('forum_categories').select('id').eq('slug', 'general').single();
+    const catId = cats?.id;
+
+    const { data: thread, error: threadErr } = await db.from('forum_threads').insert({
+      category_id: catId,
+      author_id:   currentUser.id,
+      subject,
+      is_pinned:   false,
+      reply_count: 0,
+    }).select().single();
+    if (threadErr) throw threadErr;
+
+    const { error: postErr } = await db.from('forum_posts').insert({
+      thread_id: thread.id,
+      author_id: currentUser.id,
+      body,
+      is_op:     true,
+    });
+    if (postErr) throw postErr;
+
+    ['modal-subject','modal-tags','modal-body'].forEach(id => document.getElementById(id).value = '');
+    closeNewThreadModal();
+    await loadForumThreads();
+    const fresh = FORUM_THREAD_CACHE.find(t => t.id === thread.id);
+    if (fresh) setTimeout(() => openThread(fresh), 50);
+  } catch (err) {
+    alert('Error creating thread: ' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
   }
-  const tags   = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean).slice(0, 4) : [];
-  const htmlBody = '<p>' + body.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
-  const newThread = {
-    id: 'user_' + Date.now(),
-    pinned: false, unread: false,
-    subject, preview: body.slice(0, 180),
-    author: 'collector',
-    date: new Date().toISOString().slice(0, 10),
-    replies: 0, tags,
-    posts: [{ author: 'collector', date: new Date().toISOString().slice(0, 10), op: true, text: htmlBody, likes: 0 }],
-  };
-  if (!FORUM_THREADS[cat]) FORUM_THREADS[cat] = [];
-  FORUM_THREADS[cat].unshift(newThread);
-
-  // clear form
-  ['modal-subject','modal-tags','modal-body'].forEach(id => document.getElementById(id).value = '');
-  closeNewThreadModal();
-
-  // re-render flat list and open new thread
-  renderForumThreadList();
-  setTimeout(() => openThread(newThread), 50);
 }
+
+// ── DATE FORMATTER ────────────────────────────────────────────
 
 function formatThreadDate(dateStr) {
   const d     = new Date(dateStr);
@@ -6039,7 +6092,7 @@ function resetSubmitForm() {
 }
 
 // initialise forum on load
-renderForumThreadList();
+loadForumThreads();
 
 // ── LOAD CHECKLIST — try Supabase first, fall back to hardcoded ──
 loadChecklistFromSupabase();
