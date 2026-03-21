@@ -5556,6 +5556,20 @@ async function loadForumThreads() {
       .order('updated_at',  { ascending: false });
     if (error) throw error;
     FORUM_THREAD_CACHE = data || [];
+
+    // Sort: pinned threads in a fixed order (Welcome → Suggestions → Bugs), then unpinned by updated_at desc
+    const pinnedOrder = (subject) => {
+      if (/welcome/i.test(subject))    return 0;
+      if (/suggestion/i.test(subject)) return 1;
+      if (/bug|issue/i.test(subject))  return 2;
+      return 99;
+    };
+    FORUM_THREAD_CACHE.sort((a, b) => {
+      if (a.is_pinned && b.is_pinned) return pinnedOrder(a.subject) - pinnedOrder(b.subject);
+      if (a.is_pinned) return -1;
+      if (b.is_pinned) return 1;
+      return new Date(b.updated_at) - new Date(a.updated_at);
+    });
     renderForumThreadList();
   } catch (err) {
     list.innerHTML = `<div style="padding:2rem;text-align:center;font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error loading threads: ${err.message}</div>`;
