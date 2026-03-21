@@ -2666,7 +2666,7 @@
       <div id="header-auth-user" class="header-auth-strip" style="display:none;">
         <div id="header-avatar" class="header-avatar-circle">?</div>
         <span id="header-handle" class="header-handle-label">—</span>
-        <button onclick="mockSignOut()" class="header-signout-btn">Sign out</button>
+        <button onclick="signOut()" class="header-signout-btn">Sign out</button>
       </div>
       <!-- ── STATS ── -->
       <div class="stat-pill"><span>Combinations (Checklist)</span><strong>6,416</strong></div>
@@ -3049,7 +3049,7 @@
           <input class="auth-handle-input" id="auth-handle-input" type="text" placeholder="e.g. broadleaf_bob" maxlength="40">
         </div>
       </div>
-      <button class="auth-signout-btn" onclick="mockSignOut()">Sign out</button>
+      <button class="auth-signout-btn" onclick="signOut()">Sign out</button>
     </div>
 
     <!-- ── SUBMISSION FORM (shown when signed in) ── -->
@@ -4355,11 +4355,6 @@ function closeDetail(e) {
 }
 
 // ── AUTH (prototype mock) ──
-const MOCK_ACCOUNTS = {
-  google: { name: 'collector@gmail.com', display: 'collector', provider: 'Google', initial: 'G' },
-  apple:  { name: 'collector@icloud.com', display: 'collector', provider: 'Apple',  initial: 'A' },
-};
-
 // ── AUTH STATE ───────────────────────────────────────────────────────────────
 let currentUser = null;
 
@@ -4425,7 +4420,7 @@ async function signIn(provider) {
   if (error) alert('Sign-in failed: ' + error.message);
 }
 
-async function mockSignOut() {
+async function signOut() {
   await db.auth.signOut();
   applyAuthState(null);
 }
@@ -4568,24 +4563,6 @@ function toggleCertField() {
   }
   checkSubmitReady();
 }
-
-const MOCK_REGISTRY = {
-  'PSA-12345678':{ player:'Cobb',        grade:'PSA 8', year:'1909-11', set:'T206' },
-  'PSA-23456789':{ player:'Wagner',       grade:'PSA 5', year:'1909-11', set:'T206' },
-  'PSA-34567890':{ player:'Mathewson (Dark Cap)', grade:'PSA 7', year:'1909-11', set:'T206' },
-  'PSA-45678901':{ player:'Johnson',      grade:'PSA 6', year:'1909-11', set:'T206' },
-  'PSA-56789012':{ player:'Speaker',      grade:'PSA 5', year:'1909-11', set:'T206' },
-  'PSA-67890123':{ player:'Collins E.',   grade:'PSA 4', year:'1909-11', set:'T206' },
-  'PSA-78901234':{ player:'Lajoie',       grade:'PSA 6', year:'1909-11', set:'T206' },
-  'PSA-89012345':{ player:'Young (Portrait)', grade:'PSA 3', year:'1909-11', set:'T206' },
-  'PSA-99887766':{ player:'Waddell',      grade:'PSA 4', year:'1909-11', set:'T206' },
-  'SGC-11111111':{ player:'Cobb',         grade:'SGC 6', year:'1909-11', set:'T206' },
-  'SGC-22222222':{ player:'Johnson',      grade:'SGC 7', year:'1909-11', set:'T206' },
-  'SGC-33333333':{ player:'Mathewson (Dark Cap)', grade:'SGC 5', year:'1909-11', set:'T206' },
-  'SGC-44444444':{ player:'Chance',       grade:'SGC 4', year:'1909-11', set:'T206' },
-  'SGC-55555555':{ player:'Evers (Portrait)', grade:'SGC 6', year:'1909-11', set:'T206' },
-  'BGS-10203040':{ player:'Plank',        grade:'BGS 5', year:'1909-11', set:'T206' },
-};
 
 let verifiedData = null;
 
