@@ -3342,7 +3342,7 @@ async function loadChecklistFromSupabase() {
     while (true) {
       const { data, error } = await db
         .from('checklist')
-        .select('player, back, is_hof, series, status, finest_grade, finest_grader, finest_cert, finest_collector')
+        .select('player, back, is_hof, series, status, confirmed_count, attested_count, finest_grade, finest_grader, finest_cert, finest_collector')
         .range(from, from + pageSize - 1);
       if (error) {
         console.error('Supabase query error:', JSON.stringify(error), error.message, error.code, error.hint);
@@ -3368,10 +3368,12 @@ async function loadChecklistFromSupabase() {
       h:         row.is_hof ? 1 : 0,
       s:         row.series || 'Assorted',
       status:    row.status || 'Reported',
-      grade:     row.finest_grade     || null,
-      grader:    row.finest_grader    || null,
-      cert:      row.finest_cert      || null,
-      collector: row.finest_collector || null,
+      grade:          row.finest_grade     || null,
+      grader:         row.finest_grader    || null,
+      cert:           row.finest_cert      || null,
+      collector:      row.finest_collector || null,
+      confirmedCount: row.confirmed_count  || 0,
+      attestedCount:  row.attested_count   || 0,
       // player/back aliases used by detail panel and openDetail
       player:    row.player,
       back:      row.back,
@@ -3526,7 +3528,7 @@ function buildCardObjects(data){
       grader:    topSub ? topSub.gr : (c.grader    || null),
       cert:      topSub ? topSub.ct : (c.cert      || null),
       collector: topSub ? topSub.cl : (c.collector || null),
-      submissions: graded.length,
+      submissions: graded.length || c.confirmedCount || 0,
       rawSubs:   raw.length,
       topRaw,
     };
