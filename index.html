@@ -3324,10 +3324,10 @@
           <div class="scan-counter hidden" id="scan-counter"></div>
         </div>
         <div class="finest-meta">
-          <div class="meta-item"><label>Grade</label><value id="detail-grade">PSA 8</value></div>
-          <div class="meta-item"><label>Grader</label><value id="detail-grader">PSA</value></div>
-          <div class="meta-item"><label>Cert #</label><value id="detail-cert">12345678</value></div>
-          <div class="meta-item"><label>Documented By</label><value id="detail-collector">hobbyist_42</value></div>
+          <div class="meta-item"><label>Grade</label><value id="detail-grade">—</value></div>
+          <div class="meta-item"><label>Grader</label><value id="detail-grader">—</value></div>
+          <div class="meta-item"><label>Cert #</label><value id="detail-cert">—</value></div>
+          <div class="meta-item"><label>Documented By</label><value id="detail-collector">—</value></div>
         </div>
 
         <div id="raw-finest-block" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--rule);">
@@ -4254,28 +4254,8 @@ function _renderDetailPanel(c) {
     });
     rawFinest.innerHTML = `Submitted by <strong>${rawSubs[0].cl}</strong> · Ungraded · ${rawSubs[0].imgs && rawSubs[0].imgs.length ? 'Scans on file' : 'No scans'}`;
   } else {
-    // Fallback dummy raw rows if the card has enough dummy submissions
-    const rawCount = c.submissions > 5 ? 2 : c.submissions > 2 ? 1 : 0;
-    if (rawCount > 0) {
-      rawList.innerHTML = '';
-      const rawCollectors = ['raw_and_real', 'no_slab_needed'];
-      for (let i = 0; i < rawCount; i++) {
-        const row = document.createElement('div');
-        row.className = 'submission-row';
-        row.style.opacity = '0.75';
-        row.innerHTML = `
-          <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
-          <span class="sub-collector">${rawCollectors[i]}</span>
-          <span class="sub-cert" style="font-style:italic;">ungraded · scans on file</span>
-          <span class="sub-grade" style="color:var(--text-secondary);">Raw</span>
-        `;
-        rawList.appendChild(row);
-      }
-      rawFinest.innerHTML = `Submitted by <strong>${rawCollectors[0]}</strong> · Ungraded · Scans on file`;
-    } else {
-      rawList.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.65rem;color:var(--text-muted);padding:0.5rem 0;font-style:italic;">No raw submissions for this combination.</p>';
-      rawFinest.textContent = 'No raw submissions yet for this combination.';
-    }
+    rawList.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.65rem;color:var(--text-muted);padding:0.5rem 0;font-style:italic;">No raw submissions for this combination.</p>';
+    rawFinest.textContent = 'No raw submissions yet for this combination.';
   }
 
   document.getElementById('detail-overlay').classList.add('open');
