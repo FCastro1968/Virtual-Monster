@@ -696,6 +696,49 @@
     box-sizing: border-box;
   }
 
+  /* Scan carousel arrows */
+  .scan-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: rgba(44,36,28,0.55);
+    color: #f5eed8;
+    border: none;
+    width: 2rem;
+    height: 2.8rem;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+    border-radius: 2px;
+  }
+  .card-placeholder:hover .scan-arrow { opacity: 1; }
+  .scan-arrow:hover { background: rgba(44,36,28,0.8); }
+  .scan-arrow.left  { left: 0; }
+  .scan-arrow.right { right: 0; }
+  .scan-arrow:disabled { opacity: 0 !important; cursor: default; }
+
+  /* Scan counter pip */
+  .scan-counter {
+    position: absolute;
+    bottom: 0.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.85);
+    background: rgba(44,36,28,0.5);
+    padding: 0.1rem 0.45rem;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .scan-counter.hidden { display: none; }
+
   .card-placeholder::before {
     content: '';
     position: absolute;
@@ -3276,15 +3319,15 @@
             <div class="card-placeholder-year">T206 · 1909–11</div>
             <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
           </div>
+          <button class="scan-arrow left"  id="scan-prev" onclick="stepScan(-1)" disabled>&#8249;</button>
+          <button class="scan-arrow right" id="scan-next" onclick="stepScan(1)"  disabled>&#8250;</button>
+          <div class="scan-counter hidden" id="scan-counter"></div>
         </div>
         <div class="finest-meta">
           <div class="meta-item"><label>Grade</label><value id="detail-grade">PSA 8</value></div>
           <div class="meta-item"><label>Grader</label><value id="detail-grader">PSA</value></div>
           <div class="meta-item"><label>Cert #</label><value id="detail-cert">12345678</value></div>
           <div class="meta-item"><label>Documented By</label><value id="detail-collector">hobbyist_42</value></div>
-        </div>
-        <div id="detail-scans-btn-wrap" style="display:none;margin-top:0.75rem;">
-          <button class="attested-scans-link" id="detail-scans-btn" onclick="openDetailScans()">View scans on file →</button>
         </div>
 
         <div id="raw-finest-block" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--rule);">
@@ -4036,6 +4079,76 @@ async function loadSubmissionsForCombo(player, back) {
 }
 
 // ── DETAIL PANEL ──
+// ── SCAN CAROUSEL ─────────────────────────────────────────────
+let _scanUrls  = [];
+let _scanIndex = 0;
+
+function _initScanCarousel(urls) {
+  _scanUrls  = urls || [];
+  _scanIndex = 0;
+  _renderScan();
+}
+
+function _renderScan() {
+  const placeholder = document.querySelector('.card-placeholder');
+  const prev    = document.getElementById('scan-prev');
+  const next    = document.getElementById('scan-next');
+  const counter = document.getElementById('scan-counter');
+
+  if (!_scanUrls.length) {
+    // No scans — restore text placeholder (keep any existing inner content)
+    const inner = placeholder.querySelector('.card-placeholder-inner');
+    if (!inner) {
+      placeholder.insertAdjacentHTML('afterbegin', `<div class="card-placeholder-inner">
+        <div class="card-placeholder-name" id="detail-card-name"></div>
+        <div class="card-placeholder-team" id="detail-card-team"></div>
+        <div class="card-placeholder-year">T206 · 1909–11</div>
+        <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
+      </div>`);
+    }
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
+    if (counter) counter.classList.add('hidden');
+    return;
+  }
+
+  // Render current scan image, replacing any prior image or placeholder text
+  const existingImg = placeholder.querySelector('img.carousel-img');
+  const existingInner = placeholder.querySelector('.card-placeholder-inner');
+  if (existingInner) existingInner.remove();
+
+  const url = _scanUrls[_scanIndex];
+  if (existingImg) {
+    existingImg.src = url;
+  } else {
+    const img = document.createElement('img');
+    img.className = 'carousel-img';
+    img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;margin:auto;cursor:zoom-in;';
+    img.alt = 'Scan ' + (_scanIndex + 1);
+    img.onclick = () => window.open(url, '_blank');
+    img.onerror = () => { img.style.display = 'none'; };
+    placeholder.insertBefore(img, placeholder.querySelector('.scan-arrow.left'));
+    img.src = url;
+  }
+
+  if (prev) prev.disabled = _scanIndex === 0;
+  if (next) next.disabled = _scanIndex === _scanUrls.length - 1;
+
+  if (counter) {
+    if (_scanUrls.length > 1) {
+      counter.textContent = `${_scanIndex + 1} / ${_scanUrls.length}`;
+      counter.classList.remove('hidden');
+    } else {
+      counter.classList.add('hidden');
+    }
+  }
+}
+
+function stepScan(dir) {
+  _scanIndex = Math.max(0, Math.min(_scanUrls.length - 1, _scanIndex + dir));
+  _renderScan();
+}
+
 async function openDetail(c) {
   // Show panel immediately with whatever we have cached, then refresh with live data
   document.getElementById('detail-overlay').classList.add('open');
@@ -4050,44 +4163,35 @@ function _renderDetailPanel(c) {
   document.getElementById('detail-name').childNodes[0].textContent = c.player + ' ';
   document.getElementById('detail-sub').textContent = `${c.back} · Series ${c.series}`;
 
-  // Build card placeholder first — sets detail-card-name/team IDs if no image
-  const topSub = (SUBMISSIONS[c.player+'|'+c.back] || [])[0];
-  const cardPlaceholder = document.querySelector('.card-placeholder');
-  if (topSub && topSub.imgs && topSub.imgs[0]) {
-    cardPlaceholder.innerHTML = `<img src="${topSub.imgs[0]}" alt="${c.player} front scan"
-      style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;margin:auto;"
-      onerror="this.parentElement.innerHTML='<div class=\'card-placeholder-inner\'><div class=\'card-placeholder-name\'>${c.player.toUpperCase()}</div><div class=\'card-placeholder-team\'>${c.back.toUpperCase()}</div><div class=\'card-placeholder-year\'>T206 · 1909–11</div></div>'">`;
-  } else {
-    cardPlaceholder.innerHTML = `<div class="card-placeholder-inner">
-      <div class="card-placeholder-name" id="detail-card-name">${c.player.toUpperCase()}</div>
-      <div class="card-placeholder-team" id="detail-card-team">${c.back.toUpperCase()}</div>
-      <div class="card-placeholder-year">T206 · 1909–11</div>
-      <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
-    </div>`;
-  }
   document.getElementById('detail-grade').textContent = c.grade || '—';
   document.getElementById('detail-grader').textContent = c.grader || '—';
   document.getElementById('detail-cert').textContent = c.cert || '—';
   document.getElementById('detail-collector').textContent = c.collector || '—';
   document.getElementById('detail-back-label').textContent = `${c.back} · Series ${c.series}`;
 
-  // Show/hide scans button — check both graded and raw submissions for images
-  const scansBtnWrap = document.getElementById('detail-scans-btn-wrap');
-  const scansBtn = document.getElementById('detail-scans-btn');
-  const allSubs = SUBMISSIONS[c.player+'|'+c.back] || [];
-  const subWithImgs = allSubs.find(s => s.imgs && s.imgs.length);
-  if (subWithImgs) {
-    scansBtnWrap.style.display = '';
-    scansBtn.textContent = `View ${subWithImgs.imgs.length} scan${subWithImgs.imgs.length !== 1 ? 's' : ''} on file →`;
-    scansBtn.dataset.player    = c.player;
-    scansBtn.dataset.back      = c.back;
-    scansBtn.dataset.grade     = subWithImgs.g || 'Raw';
-    scansBtn.dataset.grader    = subWithImgs.gr || 'Ungraded';
-    scansBtn.dataset.cert      = subWithImgs.ct || '—';
-    scansBtn.dataset.collector = subWithImgs.cl || '—';
-    scansBtn.dataset.israw     = subWithImgs.raw ? '1' : '0';
-  } else {
-    scansBtnWrap.style.display = 'none';
+  // Build scan carousel — collect all images from all submissions for this combo
+  const allSubsForScans = (SUBMISSIONS[c.player+'|'+c.back] || []);
+  const allScans = [];
+  allSubsForScans.forEach(s => {
+    if (s.imgs && s.imgs.length) s.imgs.forEach(url => allScans.push(url));
+  });
+  _initScanCarousel(allScans);
+
+  // If we have a scan, make sure the placeholder-inner text is gone
+  if (allScans.length === 0) {
+    const placeholder = document.querySelector('.card-placeholder');
+    let inner = placeholder.querySelector('.card-placeholder-inner');
+    if (!inner) {
+      placeholder.insertAdjacentHTML('afterbegin', `<div class="card-placeholder-inner">
+        <div class="card-placeholder-name">${c.player.toUpperCase()}</div>
+        <div class="card-placeholder-team">${c.back.toUpperCase()}</div>
+        <div class="card-placeholder-year">T206 · 1909–11</div>
+        <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
+      </div>`);
+    } else {
+      inner.querySelector('.card-placeholder-name') && (inner.querySelector('.card-placeholder-name').textContent = c.player.toUpperCase());
+      inner.querySelector('.card-placeholder-team') && (inner.querySelector('.card-placeholder-team').textContent = c.back.toUpperCase());
+    }
   }
 
   const list = document.getElementById('submissions-list');
@@ -4245,59 +4349,6 @@ function openSubmissionInModal(player, back, s, isFinest) {
   document.getElementById('scan-modal-overlay').classList.add('open');
 }
 
-function openDetailScans() {
-  const btn      = document.getElementById('detail-scans-btn');
-  const player   = btn.dataset.player;
-  const back     = btn.dataset.back;
-  const grade    = btn.dataset.grade;
-  const grader   = btn.dataset.grader;
-  const cert     = btn.dataset.cert;
-  const collector= btn.dataset.collector;
-  const isRaw    = btn.dataset.israw === '1';
-
-  const allSubs  = SUBMISSIONS[player+'|'+back] || [];
-  const sub      = allSubs.find(s => s.imgs && s.imgs.length);
-  if (!sub) return;
-
-  scanModalComboId = null;
-  document.getElementById('smd-player').textContent    = player;
-  document.getElementById('smd-back').textContent      = back + (isRaw ? ' · Attested Raw' : ' · Confirmed');
-  document.getElementById('smd-submitter').textContent = collector;
-  document.getElementById('smd-date').textContent      = sub.dt || '—';
-  document.getElementById('smd-notes').textContent     = '';
-  document.getElementById('smd-scan-count').textContent = sub.imgs.length;
-
-  const labels = ['Front','Back','Detail','Reverse'];
-  let gridHTML = '';
-
-  if (!isRaw) {
-    gridHTML += `
-      <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;padding:0.8rem 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:0.9rem;">
-        <div class="scan-modal-meta-item"><label>Grade</label><value>${grade}</value></div>
-        <div class="scan-modal-meta-item"><label>Grader</label><value>${grader}</value></div>
-        <div class="scan-modal-meta-item"><label>Cert #</label><value>${cert}</value></div>
-      </div>
-      <div style="grid-column:1/-1;margin-bottom:1rem;">
-        <a href="${registryUrl(grader, cert)}" target="_blank" rel="noopener"
-           style="font-family:'Courier Prime',monospace;font-size:0.7rem;letter-spacing:0.05em;color:var(--rust);text-decoration:underline;">
-          Verify cert #${cert} on ${grader} registry →
-        </a>
-      </div>`;
-  }
-
-  gridHTML += sub.imgs.map((url, i) => `
-    <div>
-      <img src="${url}" alt="${labels[i]||'Scan '+(i+1)}" class="scan-img"
-        onclick="window.open(this.src,'_blank')"
-        onerror="this.parentElement.innerHTML='<div class=\'scan-placeholder\'><div class=\'scan-placeholder-icon\'>⬚</div><div class=\'scan-placeholder-label\'>${labels[i]||'Scan '+(i+1)}</div></div>'">
-      <div class="scan-img-label">${labels[i]||'Scan '+(i+1)}</div>
-    </div>`).join('');
-
-  document.getElementById('smd-scan-grid').innerHTML = gridHTML;
-  document.getElementById('smd-vote-score').parentElement.style.display = isRaw ? '' : 'none';
-  document.getElementById('scan-modal-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
 
 function closeDetail(e) {
   if (e.target === document.getElementById('detail-overlay')) closeDetailBtn();
