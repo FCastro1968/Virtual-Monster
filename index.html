@@ -5679,7 +5679,7 @@ async function openThread(t) {
             <button class="post-action-btn" onclick="toggleLike('${p.id}')">
               ${liked ? '♥' : '♡'} <span class="post-like-count" id="likes-${p.id}">${p.like_count}</span>
             </button>
-            <button class="post-action-btn" onclick="quotePost('${p.id}', ${JSON.stringify(handle)}, ${JSON.stringify(p.body)})">❝ Quote</button>
+            <button class="post-action-btn quote-btn" data-handle="${escapeHtml(handle)}" data-body="${escapeHtml(p.body)}">❝ Quote</button>
             ${!t.is_locked && currentUser ? `<button class="post-action-btn" onclick="document.getElementById('reply-textarea').focus()">↩ Reply</button>` : ''}
           </div>
         </div>
@@ -5723,10 +5723,12 @@ async function toggleLike(postId) {
 
 // ── QUOTE ─────────────────────────────────────────────────────
 
-function quotePost(postId, handle, body) {
-  const plain = body.replace(/<[^>]+>/g, '').trim().slice(0, 200);
-  const ta    = document.getElementById('reply-textarea');
-  ta.value    = (ta.value ? ta.value + '\n\n' : '') + `> [${handle}]: ${plain}…\n\n`;
+function quotePost(btn) {
+  const handle = btn.dataset.handle || 'unknown';
+  const body   = btn.dataset.body   || '';
+  const plain  = body.replace(/<[^>]+>/g, '').trim().slice(0, 200);
+  const ta     = document.getElementById('reply-textarea');
+  ta.value     = (ta.value ? ta.value + '\n\n' : '') + `> [${handle}]: ${plain}…\n\n`;
   ta.focus();
   ta.setSelectionRange(ta.value.length, ta.value.length);
 }
@@ -6093,6 +6095,12 @@ function resetSubmitForm() {
 
 // initialise forum on load
 loadForumThreads();
+
+// Quote button delegation — on the static post-list container, wired once
+document.getElementById('post-list').addEventListener('click', e => {
+  const btn = e.target.closest('.quote-btn');
+  if (btn) quotePost(btn);
+});
 
 // ── LOAD CHECKLIST — try Supabase first, fall back to hardcoded ──
 loadChecklistFromSupabase();
