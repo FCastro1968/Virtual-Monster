@@ -4155,11 +4155,13 @@ async function loadSubmissionsForCombo(player, back) {
 // ── DETAIL PANEL ──
 // ── SCAN CAROUSEL ─────────────────────────────────────────────
 let _scanUrls  = [];
+let _scanLoading = false;
 let _scanIndex = 0;
 
-function _initScanCarousel(urls) {
-  _scanUrls  = urls || [];
-  _scanIndex = 0;
+function _initScanCarousel(urls, loading) {
+  _scanUrls    = urls || [];
+  _scanLoading = !!loading;
+  _scanIndex   = 0;
   _renderScan();
 }
 
@@ -4170,14 +4172,20 @@ function _renderScan() {
   const counter = document.getElementById('scan-counter');
 
   if (!_scanUrls.length) {
-    // No scans — restore text placeholder (keep any existing inner content)
+    // No scans — restore text placeholder, remove any stale image
+    const staleImg = placeholder.querySelector('img.carousel-img');
+    if (staleImg) staleImg.remove();
     const inner = placeholder.querySelector('.card-placeholder-inner');
-    if (!inner) {
+    const label = _scanLoading ? '[ loading… ]' : '[ scan pending submission ]';
+    if (inner) {
+      const lbl = inner.querySelector('.scan-status-label');
+      if (lbl) lbl.textContent = label;
+    } else {
       placeholder.insertAdjacentHTML('afterbegin', `<div class="card-placeholder-inner">
         <div class="card-placeholder-name" id="detail-card-name"></div>
         <div class="card-placeholder-team" id="detail-card-team"></div>
         <div class="card-placeholder-year">T206 · 1909–11</div>
-        <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
+        <div class="scan-status-label" style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">${label}</div>
       </div>`);
     }
     if (prev) prev.disabled = true;
@@ -4224,11 +4232,12 @@ function stepScan(dir) {
 }
 
 async function openDetail(c) {
-  // Show panel immediately with whatever we have cached, then refresh with live data
+  // Clear stale scans immediately before showing the panel, show loading state
+  _initScanCarousel([], true);
   document.getElementById('detail-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   _renderDetailPanel(c);
-  // Load real submissions from Supabase, then re-render
+  // Load real submissions from Supabase, then re-render with fresh scans
   await loadSubmissionsForCombo(c.player, c.back);
   _renderDetailPanel(c);
 }
