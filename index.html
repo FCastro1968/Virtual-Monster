@@ -4487,15 +4487,16 @@ function _renderDetailPanel(c) {
       row.className = 'submission-row';
       row.style.cursor = 'pointer';
       row.title = hasScans ? 'View scans & cert details' : 'View cert details';
+      const flagBtn = CURRENT_USER
+        ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-${s.id}')" title="Flag an issue with this submission">⚑ flag</button>`
+        : `<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection('account')" title="Sign in to flag issues">⚑ flag</button>`;
       row.innerHTML = `
-        <span class="sub-rank ${i===0?'first':''}">\${i===0?'★':i+1}</span>
-        <span class="sub-collector">\${s.cl}</span>
-        <span class="sub-cert">cert #\${s.ct}</span>
-        <span class="sub-grade">\${s.g}</span>
-        <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">\${hasScans ? '🔍' : ''}</span>
-        \${CURRENT_USER
-          ? '<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm(\'flag-' + s.id + '\')">⚑ flag</button>'
-          : '<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection(\'account\')" title="Sign in to flag issues">⚑ flag</button>'}
+        <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
+        <span class="sub-collector">${s.cl}</span>
+        <span class="sub-cert">cert #${s.ct}</span>
+        <span class="sub-grade">${s.g}</span>
+        <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">${hasScans ? '🔍' : ''}</span>
+        ${flagBtn}
       `;
       row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
       row.addEventListener('mouseleave', () => row.style.background = '');
@@ -4503,12 +4504,12 @@ function _renderDetailPanel(c) {
       list.appendChild(row);
       // Flag form
       const flagWrap = document.createElement('div');
-      flagWrap.innerHTML = `<div class="flag-form" id="flag-\${s.id}">
+      flagWrap.innerHTML = `<div class="flag-form" id="flag-${s.id}">
         <textarea placeholder="Describe the issue — e.g. wrong back, incorrect player, duplicate cert…" maxlength="500"></textarea>
         <div class="flag-form-actions">
-          <button class="flag-submit-btn" onclick="submitFlag('\${s.id}', '\${c.player}', '\${c.back}')">Submit Flag →</button>
-          <button class="flag-cancel-btn" onclick="toggleFlagForm('flag-\${s.id}')">Cancel</button>
-          <span id="flag-status-\${s.id}" style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-secondary);margin-left:0.5rem;"></span>
+          <button class="flag-submit-btn" onclick="submitFlag('${s.id}', '${c.player}', '${c.back}')">Submit Flag →</button>
+          <button class="flag-cancel-btn" onclick="toggleFlagForm('flag-${s.id}')">Cancel</button>
+          <span id="flag-status-${s.id}" style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-secondary);margin-left:0.5rem;"></span>
         </div>
       </div>`;
       list.appendChild(flagWrap);
