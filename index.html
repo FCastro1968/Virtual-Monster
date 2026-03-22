@@ -2886,7 +2886,7 @@
         <button onclick="signOut()" class="header-signout-btn">Sign out</button>
       </div>
       <!-- ── STATS ── -->
-      <div class="stat-pill"><span>Combinations (Checklist)</span><strong>6,416</strong></div>
+      <div class="stat-pill"><span>Combinations (Checklist)</span><strong id="sub-total">—</strong></div>
       <div class="stat-substats">
         <div class="substat"><span class="substat-dot substat-confirmed"></span><span class="substat-label">Confirmed</span><strong id="sub-confirmed">—</strong></div>
         <div class="substat"><span class="substat-dot substat-attested"></span><span class="substat-label">Attested</span><strong id="sub-attested">—</strong></div>
@@ -3707,6 +3707,8 @@ function initSubstats(checklist) {
     else if (s === 'Attested')  attested++;
     else                        reported++;
   });
+  const total = confirmed + attested + reported;
+  document.getElementById('sub-total').textContent    = total.toLocaleString();
   document.getElementById('sub-confirmed').textContent = confirmed.toLocaleString();
   document.getElementById('sub-reported').textContent  = reported.toLocaleString();
   document.getElementById('sub-attested').textContent  = attested.toLocaleString();
