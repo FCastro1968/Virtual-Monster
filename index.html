@@ -1102,6 +1102,89 @@
     cursor: not-allowed;
   }
 
+  /* ── SUBMISSION FLAGS ── */
+  .flag-link {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: auto;
+    opacity: 0.6;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .flag-link:hover { opacity: 1; color: var(--rust); }
+  .flag-form {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(139,58,26,0.05);
+    border: 1px solid rgba(139,58,26,0.2);
+    border-radius: 2px;
+  }
+  .flag-form.open { display: block; }
+  .flag-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: 'Libre Baskerville', serif;
+    font-size: 0.78rem;
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    padding: 0.5rem;
+    resize: vertical;
+    min-height: 60px;
+    color: var(--ink);
+  }
+  .flag-form-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    align-items: center;
+  }
+  .flag-submit-btn {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--rust);
+    color: var(--cream);
+    border: none;
+    padding: 0.35rem 0.85rem;
+    cursor: pointer;
+  }
+  .flag-submit-btn:hover { opacity: 0.85; }
+  .flag-cancel-btn {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: none;
+    color: var(--text-secondary);
+    border: 1px solid var(--rule);
+    padding: 0.35rem 0.85rem;
+    cursor: pointer;
+  }
+  .admin-flag-card {
+    border: 1px solid rgba(139,58,26,0.35);
+    background: rgba(139,58,26,0.04);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .admin-flag-reason {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 0.82rem;
+    color: var(--ink);
+    font-style: italic;
+    margin: 0.5rem 0 0.75rem;
+    padding: 0.5rem;
+    background: var(--cream);
+    border-left: 3px solid var(--rust);
+  }
+
   /* ── ABOUT ── */
   .about-section {
     display: none;
@@ -3258,7 +3341,7 @@
 
     <p>The T206 superset — known to collectors as "the Monster" — is widely regarded as the most complex checklist in the hobby. Issued by the American Tobacco Company between 1909 and 1911 across more than a dozen cigarette brands, the full universe of front-and-back combinations numbers in the thousands. Significant work has been done toward documenting it — most notably Bill Brown's widely respected superset checklist and the scholarship at T206Resource.com — but the set's sheer scope means the record remains a living document. This archive builds on that foundation, combining graded certification as its evidentiary backbone with community expertise and collective knowledge as the connective tissue.</p>
 
-    <p>The Virtual Monster was conceived as a community effort to extend that work: a validated, crowd-sourced database where every documented combination is anchored to a real, graded card — not a rumor, not a memory, not a scan of uncertain provenance. Grading certification numbers serve as the authentication mechanism, cross-referenceable against public registries maintained by PSA and SGC.</p>
+    <p>The Virtual Monster was conceived as a community effort to extend that work: a validated, crowd-sourced database where every documented combination is anchored to a real, graded card — not a rumor, not a memory, not a scan of uncertain provenance. Grading certification numbers serve as the authentication mechanism, cross-referenceable against public registries maintained by PSA and SGC. The checklist itself is anchored to Bill Brown's T206 Super Set Checklist — 6,465 documented front-and-back combinations across 36 backs — and every combination in this archive maps directly to that reference.</p>
 
     <h3>How It Works</h3>
     <p>Each entry in the checklist represents a unique front/back combination. When a collector submits a graded card, the cert number is cross-referenced against PSA or SGC's public registry and linked to its combination. The highest-graded verified example is featured as the <em>Finest Known</em> — a living title that updates automatically when a superior example is documented. Submissions are credited to the contributor who brought the example to the record, independent of current ownership.</p>
@@ -3266,15 +3349,16 @@
     <div class="policy-block">
       <h4>Submission Policies</h4>
       <ul>
-        <li>PSA and SGC certifications are accepted immediately upon submission</li>
+        <li>PSA certifications are verified automatically at submission against the PSA public registry</li>
+        <li>SGC certifications are accepted pending brief administrative review against the SGC registry</li>
         <li>BGS, CSG, and other third-party graders are accepted pending administrative review</li>
         <li>Raw (ungraded) cards are accepted with front and back scans at 300 DPI minimum</li>
-        <li>Raw submissions are catalogued in the <em>Attested</em> tier — above Reported, below Confirmed — and do not compete with graded examples for Finest Known status; community voting signals confidence and queues combinations for priority graded verification, but only a submitted cert number elevates a combination to Confirmed</li>
-        <li>Submitters are credited by their chosen username for bringing the example to the record; credit reflects documentation, not ownership</li>
-        <li>If a cert has already been submitted, subsequent submissions of the same cert number will be flagged as duplicates</li>
+        <li>Raw submissions are catalogued in the <em>Attested</em> tier — above Reported, below Confirmed — and do not compete with graded examples for Finest Known status; only a submitted cert number elevates a combination to Confirmed</li>
+        <li>Submitters are credited by their chosen handle for bringing the example to the record; credit reflects documentation, not ownership</li>
+        <li>If a cert has already been confirmed in the archive, subsequent submissions of the same cert number are blocked as duplicates</li>
         <li>When two submissions carry equal grades, PSA and SGC are ranked above other graders; at equal grade and grader, the earlier submission date holds Finest Known — first to document is first in the record</li>
         <li>Qualified grades (OC, MC, ST, MK, PD, etc.) are ranked using the PSA Registry deduction scale: grades 4–9 with any qualifier are treated as two points lower for Finest Known purposes; grades 2–3 lose one point; grades 1 and 1.5 are unaffected — a PSA 8(OC) ranks as a PSA 6</li>
-        <li>Suspected forgeries or authentication concerns are flagged and reviewed by the community panel</li>
+        <li>Suspected forgeries or authentication concerns are flagged and reviewed by the administrative panel</li>
       </ul>
     </div>
 
@@ -3282,13 +3366,13 @@
       <h4>Checklist Philosophy</h4>
       <ul>
         <li>A combination is marked <em>Confirmed</em> when at least one graded submission with a verifiable cert exists</li>
-        <li>A combination is marked <em>Attested</em> when submitted with front and back scans but no grading cert — community voting signals confidence and can queue it for priority graded verification</li>
-        <li>A combination is marked <em>Reported</em> when documented in collector literature but not yet submitted to this archive</li>
-        <li>Attested is a permanent status until a graded cert is submitted for the same combination — voting alone does not upgrade a card to Confirmed</li>
-        <li>Combinations not present in the checklist are assumed not to exist; they enter the archive through the Attested submission pathway</li>
-        <li>New combination discoveries submitted with a valid PSA or SGC cert are added to the checklist at <em>Confirmed</em> status immediately — the cert number is cross-referenceable against their public registries and serves as the verification</li>
-        <li>New combinations submitted with BGS, CSG, or other third-party certs are accepted pending administrative review before confirmed status is granted</li>
+        <li>A combination is marked <em>Attested</em> when submitted with front and back scans but no grading cert — community members may upvote to signal confidence or downvote to flag doubts; a net score of −3 or below flags the submission for administrative review</li>
+        <li>A combination is marked <em>Reported</em> when present in the Bill Brown checklist but not yet submitted to this archive</li>
+        <li>Attested is a permanent status until a graded cert is submitted for the same combination — community voting signals confidence and can queue a combination for priority graded verification, but scans alone do not upgrade a card to Confirmed</li>
+        <li>Combinations outside the Bill Brown checklist are not assumed to exist by default; they may be submitted through the Attested pathway and, if confirmed with a valid PSA or SGC cert, are added to the archive immediately</li>
+        <li>New combination discoveries submitted with BGS, CSG, or other third-party certs are accepted pending administrative review before Confirmed status is granted</li>
         <li>Back variations (factory numbers, series text) are treated as distinct combinations</li>
+        <li>The Finest Known title is held by the single highest-graded confirmed submission per combination; it updates automatically whenever a superior example is documented</li>
       </ul>
     </div>
 
@@ -3328,7 +3412,7 @@
       </div>
 
       <!-- ── FLAGGED ATTESTED SUBMISSIONS ── -->
-      <div>
+      <div style="margin-bottom:3rem;">
         <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
           Flagged Attested Submissions (net score ≤ −3)
           <span id="admin-flagged-count" style="margin-left:1rem;background:var(--sepia);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
@@ -3337,6 +3421,20 @@
           Attested (raw) submissions that the community has disputed. Review scans and either retain or remove from the archive.
         </p>
         <div id="admin-flagged-list">
+          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
+        </div>
+      </div>
+
+      <!-- ── USER-FLAGGED SUBMISSION ISSUES ── -->
+      <div>
+        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
+          User-Reported Submission Issues
+          <span id="admin-issues-count" style="margin-left:1rem;background:var(--rust);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
+        </div>
+        <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem;line-height:1.6;">
+          Issues flagged by community members on confirmed or attested submissions — wrong back, incorrect player, duplicate cert, or other data errors.
+        </p>
+        <div id="admin-issues-list">
           <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
         </div>
       </div>
@@ -3756,7 +3854,7 @@ async function checkAdminStatus(user) {
 }
 
 async function loadAdminQueues() {
-  await Promise.all([loadPendingSubmissions(), loadFlaggedSubmissions()]);
+  await Promise.all([loadPendingSubmissions(), loadFlaggedSubmissions(), loadIssueFlags()]);
 }
 
 // ── Pending SGC submissions ──
@@ -3934,6 +4032,108 @@ async function loadFlaggedSubmissions() {
 }
 
 // ── Admin action: confirm / reject / retain / remove ──
+function toggleFlagForm(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+  form.classList.toggle('open');
+  if (form.classList.contains('open')) {
+    form.querySelector('textarea').focus();
+  }
+}
+
+async function submitFlag(submissionId, player, back) {
+  if (!CURRENT_USER) return;
+  const formEl = document.getElementById('flag-' + submissionId);
+  if (!formEl) return;
+  const textarea = formEl.querySelector('textarea');
+  const statusEl = document.getElementById('flag-status-' + submissionId);
+  const reason = textarea.value.trim();
+  if (!reason) { if (statusEl) statusEl.textContent = 'Please describe the issue.'; return; }
+
+  const btn = formEl.querySelector('.flag-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  if (statusEl) statusEl.textContent = '';
+
+  try {
+    const { error } = await db.from('submission_flags').insert({
+      submission_id: submissionId,
+      flagged_by: CURRENT_USER.id,
+      player,
+      back,
+      reason,
+      status: 'open',
+    });
+    if (error) throw error;
+    formEl.classList.remove('open');
+    textarea.value = '';
+    btn.disabled = false;
+    btn.textContent = 'Submit Flag →';
+    // Show brief confirmation on the flag link
+    const flagLink = formEl.previousElementSibling?.querySelector('.flag-link');
+    if (flagLink) { flagLink.textContent = '⚑ flagged'; flagLink.style.color = 'var(--rust)'; }
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Submit Flag →';
+    if (statusEl) statusEl.textContent = 'Error: ' + err.message;
+  }
+}
+
+async function resolveFlag(flagId, cardId) {
+  const { error } = await db.from('submission_flags').update({ status: 'resolved' }).eq('id', flagId);
+  if (error) { alert('Error: ' + error.message); return; }
+  const card = document.getElementById(cardId);
+  if (card) card.innerHTML = '<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Resolved.</p>';
+  const countEl = document.getElementById('admin-issues-count');
+  if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
+}
+
+async function loadIssueFlags() {
+  const list = document.getElementById('admin-issues-list');
+  const countEl = document.getElementById('admin-issues-count');
+  if (!list) return;
+  list.innerHTML = '<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>';
+
+  const { data, error } = await db
+    .from('submission_flags')
+    .select('id, submission_id, player, back, reason, created_at, status, flagged_by, users!flagged_by(handle), submissions!submission_id(grade, grader, cert_number, player, back)')
+    .eq('status', 'open')
+    .order('created_at', { ascending: true });
+
+  if (error) { list.innerHTML = '<p style="color:var(--rust);">Error loading flags.</p>'; return; }
+
+  if (countEl) countEl.textContent = data ? data.length : 0;
+
+  if (!data || data.length === 0) {
+    list.innerHTML = '<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No open issue flags.</p>';
+    return;
+  }
+
+  list.innerHTML = '';
+  data.forEach(flag => {
+    const sub = flag.submissions;
+    const flagger = flag.users?.handle || 'unknown';
+    const cardId = 'admin-flag-' + flag.id;
+    const card = document.createElement('div');
+    card.className = 'admin-flag-card';
+    card.id = cardId;
+    card.innerHTML = `
+      <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.1em;color:var(--text-secondary);text-transform:uppercase;">
+        ${flag.player} / ${flag.back}
+        <span style="margin-left:1rem;color:var(--text-muted);">flagged by ${flagger} · ${new Date(flag.created_at).toLocaleDateString()}</span>
+      </div>
+      <div class="admin-flag-reason">"${flag.reason}"</div>
+      <div style="font-family:'Courier Prime',monospace;font-size:0.62rem;color:var(--text-secondary);margin-bottom:0.75rem;">
+        Submission: ${sub?.grade || '—'} ${sub?.grader || ''} · cert #${sub?.cert_number || '—'}
+      </div>
+      <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+        <button class="admin-btn admin-btn-confirm" onclick="resolveFlag('${flag.id}', '${cardId}')">✓ Mark Resolved</button>
+        <button class="admin-btn admin-btn-reject" onclick="adminDecide('${flag.submission_id}', 'rejected', 'flagged');resolveFlag('${flag.id}', '${cardId}')">✕ Reject Submission</button>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
 async function adminDecide(submissionId, newStatus, queue) {
   const cardId = `admin-${queue}-${submissionId}`;
   const card   = document.getElementById(cardId);
@@ -4288,16 +4488,30 @@ function _renderDetailPanel(c) {
       row.style.cursor = 'pointer';
       row.title = hasScans ? 'View scans & cert details' : 'View cert details';
       row.innerHTML = `
-        <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
-        <span class="sub-collector">${s.cl}</span>
-        <span class="sub-cert">cert #${s.ct}</span>
-        <span class="sub-grade">${s.g}</span>
-        <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">${hasScans ? '🔍' : ''}</span>
+        <span class="sub-rank ${i===0?'first':''}">\${i===0?'★':i+1}</span>
+        <span class="sub-collector">\${s.cl}</span>
+        <span class="sub-cert">cert #\${s.ct}</span>
+        <span class="sub-grade">\${s.g}</span>
+        <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">\${hasScans ? '🔍' : ''}</span>
+        \${CURRENT_USER
+          ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-\${s.id}')" title="Flag an issue with this submission">⚑ flag</button>`
+          : `<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection('account')" title="Sign in to flag issues">⚑ flag</button>`}
       `;
       row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
       row.addEventListener('mouseleave', () => row.style.background = '');
       row.addEventListener('click', () => openSubmissionInModal(c.player, c.back, s, i === 0));
       list.appendChild(row);
+      // Flag form
+      const flagWrap = document.createElement('div');
+      flagWrap.innerHTML = `<div class="flag-form" id="flag-\${s.id}">
+        <textarea placeholder="Describe the issue — e.g. wrong back, incorrect player, duplicate cert…" maxlength="500"></textarea>
+        <div class="flag-form-actions">
+          <button class="flag-submit-btn" onclick="submitFlag('\${s.id}', '\${c.player}', '\${c.back}')">Submit Flag →</button>
+          <button class="flag-cancel-btn" onclick="toggleFlagForm('flag-\${s.id}')">Cancel</button>
+          <span id="flag-status-\${s.id}" style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-secondary);margin-left:0.5rem;"></span>
+        </div>
+      </div>`;
+      list.appendChild(flagWrap);
     });
     if (realSubs.length > 10) {
       const more = document.createElement('div');
