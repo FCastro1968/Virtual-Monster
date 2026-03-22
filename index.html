@@ -4096,11 +4096,11 @@ async function loadIssueFlags() {
 
   const { data, error } = await db
     .from('submission_flags')
-    .select('id, submission_id, player, back, reason, created_at, status, flagged_by, users!flagged_by(handle), submissions!submission_id(grade, grader, cert_number, player, back)')
+    .select('id, submission_id, player, back, reason, created_at, status, flagged_by, users!flagged_by(handle), submissions!submission_id(grade, grader, cert_number)')
     .eq('status', 'open')
     .order('created_at', { ascending: true });
 
-  if (error) { list.innerHTML = '<p style="color:var(--rust);">Error loading flags.</p>'; return; }
+  if (error) { console.error('loadIssueFlags error:', error); list.innerHTML = '<p style="color:var(--rust);">Error loading flags.</p>'; return; }
 
   if (countEl) countEl.textContent = data ? data.length : 0;
 
