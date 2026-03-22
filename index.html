@@ -4282,15 +4282,16 @@ async function loadSubmissionsForCombo(player, back) {
     const { data: subs, error } = await db
       .from('submissions')
       .select(`
-        id, grade, grader, cert_number, status, raw_notes, submitted_at, grade_numeric,
+        id, grade, grader, cert_number, status, raw_notes, submitted_at,
         users!submitted_by ( handle ),
         scans ( storage_path, label, sort_order )
       `)
       .eq('combination_id', combo.id)
       .in('status', ['confirmed', 'attested'])
-      .order('grade_numeric', { ascending: false });
+      .order('submitted_at', { ascending: false });
 
-    if (error || !subs || subs.length === 0) return;
+    if (error) { console.error('loadSubmissionsForCombo query error:', error); return; }
+    if (!subs || subs.length === 0) return;
 
     // Also get net vote scores for attested submissions
     const attestedIds = subs.filter(s => s.status === 'attested').map(s => s.id);
@@ -4320,6 +4321,7 @@ async function loadSubmissionsForCombo(player, back) {
         imgs,
         notes: s.raw_notes || null,
         score: voteMap[s.id] ?? null,
+        id: s.id,
         _submissionId: s.id,
         _loaded: true,
       };
@@ -4488,7 +4490,7 @@ function _renderDetailPanel(c) {
       row.style.cursor = 'pointer';
       row.title = hasScans ? 'View scans & cert details' : 'View cert details';
       const flagBtn = CURRENT_USER
-        ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-${s.id}')" title="Flag an issue with this submission">⚑ flag</button>`
+        ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-${s._submissionId}')" title="Flag an issue with this submission">⚑ flag</button>`
         : `<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection('account')" title="Sign in to flag issues">⚑ flag</button>`;
       row.innerHTML = `
         <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
@@ -4504,12 +4506,12 @@ function _renderDetailPanel(c) {
       list.appendChild(row);
       // Flag form
       const flagWrap = document.createElement('div');
-      flagWrap.innerHTML = `<div class="flag-form" id="flag-${s.id}">
+      flagWrap.innerHTML = `<div class="flag-form" id="flag-${s._submissionId}">
         <textarea placeholder="Describe the issue — e.g. wrong back, incorrect player, duplicate cert…" maxlength="500"></textarea>
         <div class="flag-form-actions">
-          <button class="flag-submit-btn" onclick="submitFlag('${s.id}', '${c.player}', '${c.back}')">Submit Flag →</button>
-          <button class="flag-cancel-btn" onclick="toggleFlagForm('flag-${s.id}')">Cancel</button>
-          <span id="flag-status-${s.id}" style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-secondary);margin-left:0.5rem;"></span>
+          <button class="flag-submit-btn" onclick="submitFlag('${s._submissionId}', '${c.player}', '${c.back}')">Submit Flag →</button>
+          <button class="flag-cancel-btn" onclick="toggleFlagForm('flag-${s._submissionId}')">Cancel</button>
+          <span id="flag-status-${s._submissionId}" style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-secondary);margin-left:0.5rem;"></span>
         </div>
       </div>`;
       list.appendChild(flagWrap);
