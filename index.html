@@ -3765,7 +3765,8 @@ async function loadPendingSubmissions() {
         combinations (
           players ( name ),
           backs ( name )
-        )
+        ),
+        scans ( storage_path, label, sort_order )
       `)
       .eq('status', 'pending')
       .order('submitted_at', { ascending: true });
@@ -3790,6 +3791,21 @@ async function loadPendingSubmissions() {
       const date      = s.submitted_at ? s.submitted_at.slice(0, 10) : '—';
       const regUrl    = registryUrl(grader, cert);
 
+      // Build scan thumbnails
+      const sortedScans = (s.scans || []).sort((a, b) => a.sort_order - b.sort_order);
+      const scanHtml = sortedScans.length
+        ? `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.85rem;">
+            ${sortedScans.map(sc => {
+              const url = db.storage.from('scans').getPublicUrl(sc.storage_path).data.publicUrl;
+              return `<a href="${url}" target="_blank" rel="noopener" title="${sc.label || 'Scan'}">
+                <img src="${url}" alt="${sc.label || 'Scan'}"
+                  style="height:90px;width:auto;object-fit:cover;border:1px solid var(--rule);cursor:zoom-in;"
+                  onerror="this.parentElement.style.display='none'">
+              </a>`;
+            }).join('')}
+          </div>`
+        : `<p style="font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);font-style:italic;margin-bottom:0.85rem;">No scans uploaded with this submission.</p>`;
+
       const card = document.createElement('div');
       card.className = 'admin-card';
       card.id = 'admin-pending-' + s.id;
@@ -3812,6 +3828,7 @@ async function loadPendingSubmissions() {
             Look up cert #${cert} on SGC registry →
           </a>
         </div>
+        ${scanHtml}
         <div class="admin-actions">
           <button class="admin-btn admin-btn-confirm" onclick="adminDecide('${s.id}', 'confirmed', 'pending')">✓ Confirm</button>
           <button class="admin-btn admin-btn-reject"  onclick="adminDecide('${s.id}', 'rejected',  'pending')">✕ Reject</button>
