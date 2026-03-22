@@ -2486,6 +2486,41 @@
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: span 1; }
   }
+
+  @media (max-width: 700px) {
+    /* Masthead: stack title above stats */
+    .masthead { flex-direction: column; gap: 1rem; }
+    .masthead-left { max-width: 100%; }
+    .masthead-stats { align-items: stretch; width: 100%; }
+    .stat-pill { min-width: 0; }
+    .header-auth-strip { min-width: 0; }
+
+    /* Nav: wrap buttons and allow scroll */
+    nav { flex-wrap: wrap; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .nav-btn { flex: 0 0 auto; font-size: 0.6rem; padding: 0.45rem 0.65rem; }
+
+    /* Checklist table: hide lower-priority columns, allow horizontal scroll */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #checklist-table th:nth-child(4),
+    #checklist-table td:nth-child(4) { display: none; } /* Finest Known */
+    #checklist-table th:nth-child(5),
+    #checklist-table td:nth-child(5) { display: none; } /* Subs */
+
+    /* Detail panel */
+    .detail-body { grid-template-columns: 1fr; }
+    .finest-panel { border-right: none; border-bottom: 1px solid var(--rule); }
+
+    /* Header/container padding */
+    header, .container, footer { padding-left: 1rem; padding-right: 1rem; }
+
+    /* Recent feed: stack to single column */
+    .recent-two-col { grid-template-columns: 1fr; }
+
+    /* Confirmed entry: tighten layout */
+    .confirmed-entry { grid-template-columns: 2.5rem 1fr; }
+    .conf-grade-col { grid-column: 2; }
+  }
+
   /* ── CERT VERIFICATION ── */
   .verify-box {
     padding: 1rem 1.25rem;
@@ -2808,7 +2843,7 @@
           </div>
         </div>
 
-        <div class="checklist-wrap">
+        <div class="checklist-wrap table-wrap">
           <table id="checklist-table">
             <thead>
               <tr>
@@ -4552,6 +4587,10 @@ function resetVerification() {
     document.getElementById('verify-panel').style.display = 'none';
     document.getElementById('card-identity-fields').style.display = 'none';
     ['verify-success','verify-notfound','verify-checking'].forEach(id => document.getElementById(id).style.display='none');
+    const dupWarn = document.getElementById('dup-cert-warning');
+    if (dupWarn) dupWarn.style.display = 'none';
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.title = ''; }
     checkSubmitReady();
   }
 }
@@ -4652,35 +4691,50 @@ document.addEventListener('DOMContentLoaded', initScanUploadZone);
 
 // ── CERT MATCHING HELPERS ────────────────────────────────────────────────────
 
-// Convert PSA variety string to checklist player name
-// e.g. "DELAHANTY-LOUISVILLE" → tries to find "Delehanty (Louisville)" in CHECKLIST
+// Convert PSA subject/variety to checklist player name.
+// PSA subject format: "COBB, TY" or "CHIEF BENDER" or "YOUNG, CY"
+// PSA variety format: "BAT ON SHOULDER", "PORTRAIT", "LOUISVILLE" etc.
 function matchPlayerFromPSA(subject, variety, brand) {
-  // First try: match by brand + variety against checklist
-  // PSA variety format: "LASTNAME-DESCRIPTOR" e.g. "DELAHANTY-LOUISVILLE", "COBB-BAT ON SHOULDER"
-  const variety_lc = (variety || '').toLowerCase().replace(/-/g, ' ');
-  const subject_lc = (subject || '').toLowerCase();
+  const source = (LIVE_CHECKLIST.length ? LIVE_CHECKLIST : CHECKLIST);
+  const subject_lc = (subject || '').toLowerCase().trim();
+  const variety_lc = (variety || '').toLowerCase().replace(/-/g, ' ').trim();
 
-  // Get unique players from checklist that also have this back
-  const candidatesForBrand = [...new Set(CHECKLIST
-    .filter(c => c.b === brand)
-    .map(c => c.p))];
+  // Extract likely last name from PSA subject:
+  // "COBB, TY" → "cobb" | "CHIEF BENDER" → "bender" | "HOME RUN BAKER" → "baker"
+  let subjectLastName = '';
+  if (subject_lc.includes(',')) {
+    // Lastname, Firstname format
+    subjectLastName = subject_lc.split(',')[0].trim();
+  } else {
+    // Space-separated — last word is usually the surname
+    subjectLastName = subject_lc.split(' ').pop().trim();
+  }
 
-  // Score each candidate against both subject and variety
+  // Get unique player names — prefer candidates for this back brand
+  const allPlayers = [...new Set(source.map(c => c.p))];
+
   let best = null, bestScore = 0;
-  for (const player of CHECKLIST.map(c => c.p)) {
-    const p_lc = player.toLowerCase();
-    // Extract last name from player string (before space or parenthesis)
-    const lastName = p_lc.split(/[\s(]/)[0];
-    const subjectLastName = subject_lc.split(' ').pop();
+  for (const player of allPlayers) {
+    const p_lc   = player.toLowerCase();
+    const lastName = p_lc.split(/[\s(]/)[0].trim();
 
     let score = 0;
-    // Last name match is the strongest signal
-    if (lastName === subjectLastName) score += 10;
-    else if (lastName.includes(subjectLastName) || subjectLastName.includes(lastName)) score += 6;
 
-    // Check if variety words appear in player string
-    const varietyWords = variety_lc.split(' ').filter(w => w.length > 3);
-    varietyWords.forEach(w => { if (p_lc.includes(w)) score += 3; });
+    // Last name match — strongest signal
+    if (lastName === subjectLastName)                              score += 10;
+    else if (lastName.startsWith(subjectLastName) ||
+             subjectLastName.startsWith(lastName))                score += 6;
+    else if (lastName.includes(subjectLastName) ||
+             subjectLastName.includes(lastName))                   score += 4;
+
+    // Variety words in player descriptor e.g. "bat on shoulder" in "Cobb (Bat on Shoulder)"
+    if (variety_lc) {
+      const varietyWords = variety_lc.split(' ').filter(w => w.length > 3);
+      varietyWords.forEach(w => { if (p_lc.includes(w)) score += 3; });
+    }
+
+    // Bonus: player exists for this specific back brand
+    if (brand && source.some(c => c.p === player && c.b === brand)) score += 2;
 
     if (score > bestScore) { bestScore = score; best = player; }
   }
@@ -4751,7 +4805,7 @@ async function verifyCert() {
   }
 }
 
-function showVerifySuccess(d) {
+async function showVerifySuccess(d) {
   setRegistryLinks(d.company, d.cert);
   document.getElementById('verify-company-label').textContent = d.company;
   document.getElementById('verify-cert-display').textContent  = d.cert;
@@ -4766,6 +4820,45 @@ function showVerifySuccess(d) {
     <div class="verify-field"><label>Year</label><value>${d.year || '1909-11'}</value></div>
     ${d.manualVerification ? `<div class="verify-field" style="grid-column:1/-1"><label>Note</label><value style="color:var(--rust)">SGC cert recorded — an admin will verify this cert against the SGC registry before it appears as Confirmed. You can proceed to submit.</value></div>` : ''}
   `;
+
+  // ── Duplicate cert pre-check ──────────────────────────────
+  const dupWrap = document.getElementById('dup-cert-warning') || (() => {
+    const el = document.createElement('div');
+    el.id = 'dup-cert-warning';
+    el.style.cssText = 'display:none;margin-top:0.75rem;padding:0.75rem 1rem;border:1px solid rgba(139,58,26,0.5);background:rgba(139,58,26,0.06);font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--rust);line-height:1.6;';
+    document.getElementById('verify-success').after(el);
+    return el;
+  })();
+  dupWrap.style.display = 'none';
+
+  try {
+    const { data: existing } = await db
+      .from('submissions')
+      .select('id, player, back, grade, submitted_by, users!submitted_by(handle)')
+      .eq('cert_number', d.cert)
+      .eq('status', 'confirmed')
+      .maybeSingle();
+
+    if (existing) {
+      const submitter = existing.users?.handle || 'another contributor';
+      dupWrap.innerHTML = `⚠ Cert #${d.cert} has already been submitted — <strong>${existing.player} / ${existing.back}</strong> (${existing.grade}), documented by <strong>${submitter}</strong>. Submitting again will be rejected. If you believe this is an error, please use the forum to flag it.`;
+      dupWrap.style.display = '';
+      // Disable the submit button so they can't accidentally proceed
+      const submitBtn = document.getElementById('submit-btn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.title = 'This cert has already been submitted.';
+      }
+    } else {
+      // Re-enable submit in case a previous check had disabled it
+      const submitBtn = document.getElementById('submit-btn');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.title = ''; }
+    }
+  } catch (err) {
+    // Non-fatal — don't block submission if the check fails
+    console.warn('Dup cert check failed:', err.message);
+  }
+  // ─────────────────────────────────────────────────────────
 
   const s = document.getElementById('verify-success');
   s.style.display=''; s.classList.add('fade-in-up');
