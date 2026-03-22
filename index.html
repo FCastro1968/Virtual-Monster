@@ -3943,6 +3943,11 @@ async function adminDecide(submissionId, newStatus, queue) {
 
   try {
     const updatePayload = { status: newStatus, updated_at: new Date().toISOString() };
+    // Rejected/removed submissions are never finest graded — set explicitly
+    // so the recompute trigger has a valid non-null starting value
+    if (newStatus === 'rejected' || newStatus === 'removed') {
+      updatePayload.is_finest_graded = false;
+    }
     if (gradeValue) {
       updatePayload.grade = gradeValue;
       updatePayload.cert_verified_at = new Date().toISOString();
