@@ -4119,12 +4119,12 @@ async function loadIssueFlags() {
     card.id = cardId;
     card.innerHTML = `
       <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.1em;color:var(--text-secondary);text-transform:uppercase;">
-        ${flag.player} / ${flag.back}
-        <span style="margin-left:1rem;color:var(--text-muted);">flagged by ${flagger} · ${new Date(flag.created_at).toLocaleDateString()}</span>
+        ${escapeHtml(flag.player)} / ${escapeHtml(flag.back)}
+        <span style="margin-left:1rem;color:var(--text-muted);">flagged by ${escapeHtml(flagger)} · ${new Date(flag.created_at).toLocaleDateString()}</span>
       </div>
-      <div class="admin-flag-reason">"${flag.reason}"</div>
+      <div class="admin-flag-reason">"${escapeHtml(flag.reason)}"</div>
       <div style="font-family:'Courier Prime',monospace;font-size:0.62rem;color:var(--text-secondary);margin-bottom:0.75rem;">
-        Submission: ${sub?.grade || '—'} ${sub?.grader || ''} · cert #${sub?.cert_number || '—'}
+        Submission: ${escapeHtml(sub?.grade || '—')} ${escapeHtml(sub?.grader || '')} · cert #${escapeHtml(sub?.cert_number || '—')}
       </div>
       <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
         <button class="admin-btn admin-btn-confirm" onclick="resolveFlag('${flag.id}', '${cardId}')">✓ Mark Resolved</button>
@@ -4493,9 +4493,9 @@ function _renderDetailPanel(c) {
         : `<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection('account')" title="Sign in to flag issues">⚑ flag</button>`;
       row.innerHTML = `
         <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
-        <span class="sub-collector">${s.cl}</span>
-        <span class="sub-cert">cert #${s.ct}</span>
-        <span class="sub-grade">${s.g}</span>
+        <span class="sub-collector">${escapeHtml(s.cl || '')}</span>
+        <span class="sub-cert">cert #${escapeHtml(s.ct || '')}</span>
+        <span class="sub-grade">${escapeHtml(s.g || '')}</span>
         <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">${hasScans ? '🔍' : ''}</span>
         ${flagBtn}
       `;
@@ -4541,7 +4541,7 @@ function _renderDetailPanel(c) {
       row.title = hasScans ? 'View scans on file' : 'No scans on file';
       row.innerHTML = `
         <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
-        <span class="sub-collector">${s.cl}</span>
+        <span class="sub-collector">${escapeHtml(s.cl || '')}</span>
         <span class="sub-cert" style="font-style:italic;">ungraded · ${hasScans ? 'scans on file' : 'no scans'}</span>
         <span class="sub-grade" style="color:var(--text-secondary);">Raw</span>
         <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">${hasScans ? '🔍' : ''}</span>
@@ -4551,7 +4551,7 @@ function _renderDetailPanel(c) {
       row.addEventListener('click', () => openSubmissionInModal(c.player, c.back, s, i === 0));
       rawList.appendChild(row);
     });
-    rawFinest.innerHTML = `Submitted by <strong>${rawSubs[0].cl}</strong> · Ungraded · ${rawSubs[0].imgs && rawSubs[0].imgs.length ? 'Scans on file' : 'No scans'}`;
+    rawFinest.innerHTML = `Submitted by <strong>${escapeHtml(rawSubs[0].cl || '')}</strong> · Ungraded · ${rawSubs[0].imgs && rawSubs[0].imgs.length ? 'Scans on file' : 'No scans'}`;
   } else {
     rawList.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.65rem;color:var(--text-muted);padding:0.5rem 0;font-style:italic;">No raw submissions for this combination.</p>';
     rawFinest.textContent = 'No raw submissions yet for this combination.';
@@ -5105,7 +5105,7 @@ async function showVerifySuccess(d) {
 
     if (existing) {
       const submitter = existing.users?.handle || 'another contributor';
-      dupWrap.innerHTML = `⚠ Cert #${d.cert} has already been submitted — <strong>${existing.player} / ${existing.back}</strong> (${existing.grade}), documented by <strong>${submitter}</strong>. Submitting again will be rejected. If you believe this is an error, please use the forum to flag it.`;
+      dupWrap.innerHTML = `⚠ Cert #${escapeHtml(String(d.cert))} has already been submitted — <strong>${escapeHtml(existing.player)} / ${escapeHtml(existing.back)}</strong> (${escapeHtml(existing.grade)}), documented by <strong>${escapeHtml(submitter)}</strong>. Submitting again will be rejected. If you believe this is an error, please use the forum to flag it.`;
       dupWrap.style.display = '';
       // Disable the submit button so they can't accidentally proceed
       const submitBtn = document.getElementById('submit-btn');
@@ -5236,12 +5236,12 @@ function renderConfirmedFeed(count) {
       <div class="conf-body">
         <div class="conf-player">${c.player}</div>
         <div class="conf-back">${c.back}</div>
-        <div class="conf-submitter">Submitted by <strong>${c.submitter}</strong> · ${c.daysAgo === 1 ? 'Yesterday' : c.daysAgo + ' days ago'}</div>
+        <div class="conf-submitter">Submitted by <strong>${escapeHtml(c.submitter || '')}</strong> · ${c.daysAgo === 1 ? 'Yesterday' : c.daysAgo + ' days ago'}</div>
       </div>
       <div class="conf-grade-col">
         ${c.isNew ? '<span class="conf-new-badge">New Combo</span>' : ''}
-        <span class="conf-grade">${c.grade}</span>
-        <span class="conf-grader">${c.grader}</span>
+        <span class="conf-grade">${escapeHtml(c.grade || '')}</span>
+        <span class="conf-grader">${escapeHtml(c.grader || '')}</span>
       </div>
     `;
     feed.appendChild(entry);
@@ -5284,11 +5284,11 @@ function renderAttestedList(count) {
         <span class="attested-status-tag">Attested · Raw</span>
       </div>
       <div class="attested-meta">
-        <span class="attested-submitter">Submitted by <strong>${c.submitter}</strong> · ${c.daysAgo} days ago</span>
+        <span class="attested-submitter">Submitted by <strong>${escapeHtml(c.submitter || '')}</strong> · ${c.daysAgo} days ago</span>
         <button class="attested-scans-link" onclick="event.stopPropagation();openScanModal('${c.id}')">${c.scans} scan${c.scans !== 1 ? 's' : ''} on file — view &amp; review</button>
         ${promote}${flagged}
       </div>
-      ${c.notes ? `<div class="attested-notes">"${c.notes}"</div>` : ''}
+      ${c.notes ? `<div class="attested-notes">"${escapeHtml(c.notes)}"</div>` : ''}
       <div class="vote-row">
         <button class="vote-btn ${upActive}" onclick="event.stopPropagation();castVote('${c.id}', 1)" title="Upvote — I believe this combination is authentic">
           <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,1 11,6 1,6"/><line x1="6" y1="1" x2="6" y2="11"/></svg>
@@ -5790,7 +5790,7 @@ function renderLeaderboard(boardId, data, unit, valueClass) {
     div.innerHTML = `
       ${rankEl}
       <div>
-        <div class="lb-collector-name">${row.handle}</div>
+        <div class="lb-collector-name">${escapeHtml(row.handle || '')}</div>
       </div>
       <div>
         <div class="lb-value">${row.count}</div>
@@ -5813,9 +5813,9 @@ function renderMentions(data) {
     const card = document.createElement('div');
     card.className = 'mention-card';
     card.innerHTML = `
-      <div class="mention-avatar">${m.handle[0].toUpperCase()}</div>
+      <div class="mention-avatar">${escapeHtml(m.handle[0].toUpperCase())}</div>
       <div>
-        <div class="mention-name">${m.handle}</div>
+        <div class="mention-name">${escapeHtml(m.handle)}</div>
         <div class="mention-count">${m.count} submission${m.count !== 1 ? 's' : ''}</div>
       </div>
     `;
