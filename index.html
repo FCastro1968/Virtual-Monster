@@ -1075,22 +1075,31 @@
     color: var(--text-secondary);
   }
 
-
+  .submit-main-btn {
+    display: block;
+    width: 100%;
     font-family: 'Courier Prime', monospace;
-    font-size: 0.75rem;
+    font-size: 1rem;
     letter-spacing: 0.15em;
     text-transform: uppercase;
     background: var(--ink);
     color: var(--cream);
     border: none;
-    padding: 0.85rem 2.5rem;
+    padding: 1.25rem 2.5rem;
     cursor: pointer;
-    transition: background 0.15s;
-    margin-top: 1.5rem;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 2rem;
+    border-radius: 2px;
   }
 
-  .submit-main-btn:hover {
+  .submit-main-btn:not(:disabled):hover {
     background: var(--rust);
+    transform: translateY(-1px);
+  }
+
+  .submit-main-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   /* ── ABOUT ── */
@@ -3239,7 +3248,7 @@
       </div>
     </div>
 
-    <button class="submit-main-btn" id="submit-main-btn" style="opacity:0.4;cursor:not-allowed;" disabled onclick="submitCard()">Verify Cert to Continue →</button>
+    <button class="submit-main-btn" id="submit-main-btn" disabled onclick="submitCard()">Verify Cert to Continue →</button>
     </div><!-- /submit-form-body -->
   </div>
 
@@ -3975,6 +3984,14 @@ async function adminDecide(submissionId, newStatus, queue) {
     const countId = queue === 'pending' ? 'admin-pending-count' : 'admin-flagged-count';
     const countEl = document.getElementById(countId);
     if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
+
+    // Refresh checklist and recent feed so confirmed/attested cards appear immediately
+    if (newStatus === 'confirmed' || newStatus === 'attested') {
+      await Promise.all([
+        loadChecklistFromSupabase(),
+        loadRecentConfirmedFromSupabase(),
+      ]);
+    }
 
   } catch (err) {
     card.querySelectorAll('.admin-btn').forEach(b => { b.disabled = false; });
