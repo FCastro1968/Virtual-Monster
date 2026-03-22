@@ -4494,8 +4494,8 @@ function _renderDetailPanel(c) {
         <span class="sub-grade">\${s.g}</span>
         <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">\${hasScans ? '🔍' : ''}</span>
         \${CURRENT_USER
-          ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-\${s.id}')" title="Flag an issue with this submission">⚑ flag</button>`
-          : `<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection('account')" title="Sign in to flag issues">⚑ flag</button>`}
+          ? '<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm(\'flag-' + s.id + '\')">⚑ flag</button>'
+          : '<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection(\'account\')" title="Sign in to flag issues">⚑ flag</button>'}
       `;
       row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
       row.addEventListener('mouseleave', () => row.style.background = '');
