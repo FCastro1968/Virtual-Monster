@@ -4042,7 +4042,7 @@ function toggleFlagForm(formId) {
 }
 
 async function submitFlag(submissionId, player, back) {
-  if (!CURRENT_USER) return;
+  if (!currentUser) return;
   const formEl = document.getElementById('flag-' + submissionId);
   if (!formEl) return;
   const textarea = formEl.querySelector('textarea');
@@ -4058,7 +4058,7 @@ async function submitFlag(submissionId, player, back) {
   try {
     const { error } = await db.from('submission_flags').insert({
       submission_id: submissionId,
-      flagged_by: CURRENT_USER.id,
+      flagged_by: currentUser.id,
       player,
       back,
       reason,
@@ -4287,8 +4287,7 @@ async function loadSubmissionsForCombo(player, back) {
         scans ( storage_path, label, sort_order )
       `)
       .eq('combination_id', combo.id)
-      .in('status', ['confirmed', 'attested'])
-      .order('submitted_at', { ascending: false });
+      .in('status', ['confirmed', 'attested']);
 
     if (error) { console.error('loadSubmissionsForCombo query error:', error); return; }
     if (!subs || subs.length === 0) return;
@@ -4489,7 +4488,7 @@ function _renderDetailPanel(c) {
       row.className = 'submission-row';
       row.style.cursor = 'pointer';
       row.title = hasScans ? 'View scans & cert details' : 'View cert details';
-      const flagBtn = CURRENT_USER
+      const flagBtn = currentUser
         ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-${s._submissionId}')" title="Flag an issue with this submission">⚑ flag</button>`
         : `<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection('account')" title="Sign in to flag issues">⚑ flag</button>`;
       row.innerHTML = `
