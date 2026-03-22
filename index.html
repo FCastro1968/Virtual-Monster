@@ -4083,7 +4083,7 @@ async function resolveFlag(flagId, cardId) {
   const { error } = await db.from('submission_flags').update({ status: 'resolved' }).eq('id', flagId);
   if (error) { alert('Error: ' + error.message); return; }
   const card = document.getElementById(cardId);
-  if (card) card.innerHTML = '<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Resolved.</p>';
+  if (card) card.innerHTML = "<p style=\"font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;\">Resolved.</p>";
   const countEl = document.getElementById('admin-issues-count');
   if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
 }
@@ -4092,7 +4092,7 @@ async function loadIssueFlags() {
   const list = document.getElementById('admin-issues-list');
   const countEl = document.getElementById('admin-issues-count');
   if (!list) return;
-  list.innerHTML = '<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>';
+  list.innerHTML = "<p style=\"font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;\">Loading…</p>";
 
   const { data, error } = await db
     .from('submission_flags')
@@ -4105,7 +4105,7 @@ async function loadIssueFlags() {
   if (countEl) countEl.textContent = data ? data.length : 0;
 
   if (!data || data.length === 0) {
-    list.innerHTML = '<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No open issue flags.</p>';
+    list.innerHTML = "<p style=\"font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;\">No open issue flags.</p>";
     return;
   }
 
