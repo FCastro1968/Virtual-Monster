@@ -124,7 +124,7 @@
     align-items: center;
     gap: 1.5rem;
     width: 100%;
-    min-width: 280px;
+    min-width: 0;
   }
 
   .stat-pill strong {
@@ -140,7 +140,7 @@
     background: rgba(237,224,196,0.5);
     border: 1px solid var(--rule);
     border-top: none;
-    min-width: 280px;
+    min-width: 0;
     width: 100%;
     margin-top: -1px;
     margin-bottom: 0.35rem;
@@ -2886,29 +2886,37 @@
         <button onclick="signOut()" class="header-signout-btn">Sign out</button>
       </div>
       <!-- ── STATS ── -->
-      <div class="stat-pill"><span>Combinations (Checklist)</span><strong id="sub-total">—</strong></div>
-      <div class="stat-substats">
-        <div class="substat"><span class="substat-dot substat-confirmed"></span><span class="substat-label">Confirmed</span><strong id="sub-confirmed">—</strong></div>
-        <div class="substat"><span class="substat-dot substat-attested"></span><span class="substat-label">Attested</span><strong id="sub-attested">—</strong></div>
-        <div class="substat"><span class="substat-dot substat-reported"></span><span class="substat-label">Reported</span><strong id="sub-reported">—</strong></div>
-      </div>
-      <div class="stat-pill"><span>Documented Progress</span><strong id="sub-progress">—</strong></div>
-      <div class="stat-substats" style="margin-bottom:0.35rem;">
-        <div class="substat">
-          <span class="substat-dot" style="background:var(--sepia);"></span>
-          <span class="substat-label">Confirmed + Attested</span>
-          <strong id="sub-documented">—</strong>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;width:100%;">
+        <!-- Left col: combinations + progress -->
+        <div style="display:flex;flex-direction:column;">
+          <div class="stat-pill"><span>Combinations (Checklist)</span><strong id="sub-total">—</strong></div>
+          <div class="stat-substats">
+            <div class="substat"><span class="substat-dot substat-confirmed"></span><span class="substat-label">Confirmed</span><strong id="sub-confirmed">—</strong></div>
+            <div class="substat"><span class="substat-dot substat-attested"></span><span class="substat-label">Attested</span><strong id="sub-attested">—</strong></div>
+            <div class="substat"><span class="substat-dot substat-reported"></span><span class="substat-label">Reported</span><strong id="sub-reported">—</strong></div>
+          </div>
+          <div class="stat-pill"><span>Documented Progress</span><strong id="sub-progress">—</strong></div>
+          <div class="stat-substats" style="margin-bottom:0;">
+            <div class="substat">
+              <span class="substat-dot" style="background:var(--sepia);"></span>
+              <span class="substat-label">Confirmed + Attested</span>
+              <strong id="sub-documented">—</strong>
+            </div>
+            <div class="substat">
+              <span class="substat-dot" style="background:var(--faded);"></span>
+              <span class="substat-label">Avg Finest Known Score</span>
+              <strong id="sub-avg-score">—</strong>
+            </div>
+          </div>
         </div>
-        <div class="substat">
-          <span class="substat-dot" style="background:var(--faded);"></span>
-          <span class="substat-label">Avg Finest Known Score</span>
-          <strong id="sub-avg-score">—</strong>
+        <!-- Right col: set composition stats -->
+        <div style="display:flex;flex-direction:column;">
+          <div class="stat-pill"><span>Brand-Series (Backs)</span><strong>36</strong></div>
+          <div class="stat-pill"><span>Distinct Brands</span><strong>15</strong></div>
+          <div class="stat-pill"><span>Distinct Players / Managers</span><strong>392</strong></div>
+          <div class="stat-pill"><span>Card Fronts (Subjects)</span><strong>524</strong></div>
         </div>
       </div>
-      <div class="stat-pill"><span>Brand-Series (Backs)</span><strong>36</strong></div>
-      <div class="stat-pill"><span>Distinct Brands</span><strong>15</strong></div>
-      <div class="stat-pill"><span>Distinct Players / Managers</span><strong>392</strong></div>
-      <div class="stat-pill"><span>Card Fronts (Subjects)</span><strong>524</strong></div>
     </div>
   </div>
 </header>
