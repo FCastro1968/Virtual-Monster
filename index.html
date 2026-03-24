@@ -3025,6 +3025,7 @@
           </div>
         </div>
 
+        <p style="font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.06em;margin:0 0 0.6rem;text-align:right;">Click any row to view submission details &amp; scans</p>
         <div class="checklist-wrap table-wrap">
           <table id="checklist-table">
             <thead>
@@ -3410,6 +3411,7 @@
         <div class="upload-zone" id="scan-upload-zone">
           <p>DRAG &amp; DROP SCANS HERE</p>
           <p style="margin-top:0.4rem;opacity:0.6;">or click to browse · JPG, PNG, TIFF, WebP accepted · 300 DPI minimum recommended</p>
+          <p style="margin-top:0.5rem;font-size:0.72rem;color:var(--gold);letter-spacing:0.05em;">Upload front scan first — it will be used as the gallery thumbnail</p>
           <input type="file" id="scan-file-input" multiple accept="image/jpeg,image/png,image/tiff,image/webp"
             style="display:none;" onchange="handleScanFiles(this.files)">
         </div>
@@ -6414,6 +6416,9 @@ async function submitCard() {
     const newStatus = status === 'confirmed' ? 'Confirmed'
                     : status === 'attested'  ? 'Attested'
                     : null;
+    // Invalidate cached submission data for this combo so detail panel re-fetches fresh finest known
+    const submittedKey = player + '|' + back;
+    if (SUBMISSIONS[submittedKey]) delete SUBMISSIONS[submittedKey];
     await loadChecklistFromSupabase();
     if (newStatus) {
       const liveRow = LIVE_CHECKLIST.find(c => c.p === player && c.b === back);
