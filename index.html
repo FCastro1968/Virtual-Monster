@@ -1107,17 +1107,17 @@
     font-family: 'Courier Prime', monospace;
     font-size: 0.58rem;
     letter-spacing: 0.08em;
-    color: var(--text-muted);
+    color: var(--rust);
     text-transform: uppercase;
     cursor: pointer;
     background: none;
-    border: none;
-    padding: 0;
+    border: 1px solid rgba(139,58,26,0.3);
+    padding: 0.15rem 0.4rem;
     margin-left: auto;
-    opacity: 0.6;
-    transition: opacity 0.15s, color 0.15s;
+    opacity: 0.7;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
   }
-  .flag-link:hover { opacity: 1; color: var(--rust); }
+  .flag-link:hover { opacity: 1; color: var(--cream); background: var(--rust); border-color: var(--rust); }
   .flag-form {
     display: none;
     margin-top: 0.5rem;
@@ -1214,8 +1214,11 @@
   .gallery-section { display: none; }
   .gallery-section.active { display: block; }
   .gallery-controls {
-    display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+    display: flex; flex-direction: column; gap: 0.65rem;
     margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--rule);
+  }
+  .gallery-controls-row {
+    display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;
   }
   .gallery-controls input {
     font-family: 'Courier Prime', monospace; font-size: 0.78rem;
@@ -2875,9 +2878,9 @@
           <svg width="11" height="11" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
           Google
         </button>
-        <button class="header-auth-btn" onclick="signIn('apple')">
+        <button class="header-auth-btn" onclick="alert('Apple sign-in is coming soon. Please use Google sign-in for now.')" title="Coming soon" style="opacity:0.5;cursor:default;">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-          Apple
+          Apple <span style="font-size:0.55rem;letter-spacing:0.06em;opacity:0.8;">(soon)</span>
         </button>
       </div>
       <div id="header-auth-user" class="header-auth-strip" style="display:none;">
@@ -3054,7 +3057,10 @@
           <span id="fs-reported" style="color:var(--text-muted);"></span>
           <span id="fs-pct" style="color:var(--sepia);font-weight:700;margin-left:auto;"></span>
         </div>
-        <p style="font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.06em;margin:0 0 0.6rem;text-align:right;">Click any row to view submission details &amp; scans</p>
+        <p style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);letter-spacing:0.07em;margin:0 0 0.6rem;text-align:right;border:1px solid var(--rule);background:rgba(139,105,20,0.06);padding:0.3rem 0.65rem;display:inline-block;float:right;">
+          ↓ Click any row to view submission details &amp; scans
+        </p>
+        <div style="clear:both;"></div>
         <div class="checklist-wrap table-wrap">
           <table id="checklist-table">
             <thead>
@@ -3082,9 +3088,10 @@
       <!-- ── LEFT: RECENTLY CONFIRMED ── -->
       <div>
         <div class="section-rule"><h2>Recently Confirmed</h2></div>
-        <p style="font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-secondary);line-height:1.65;margin-bottom:1.25rem;">
+        <p style="font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-secondary);line-height:1.65;margin-bottom:0.6rem;">
           Combinations newly elevated to <em>Confirmed</em> status — graded submissions verified against PSA or SGC registries within the last 90 days.
         </p>
+        <p style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);letter-spacing:0.07em;margin:0 0 0.85rem;border:1px solid var(--rule);background:rgba(139,105,20,0.06);padding:0.3rem 0.65rem;display:inline-block;">↓ Click any row to view submission details &amp; scans</p>
         <div class="confirmed-feed" id="confirmed-feed"></div>
         <button class="recent-load-more" onclick="loadMoreConfirmed()">Load earlier confirmations →</button>
       </div>
@@ -3095,6 +3102,7 @@
         <div class="attest-explain-callout">
           <strong>Attested</strong> combinations are supported by raw (ungraded) submissions with scans on file but no grading cert. Community members may upvote to signal confidence or downvote to flag doubts. A high vote score flags the combination for priority graded verification — the pathway to Confirmed status. Scores below −3 are flagged for admin review.
         </div>
+        <p style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);letter-spacing:0.07em;margin:0 0 0.85rem;border:1px solid var(--rule);background:rgba(139,105,20,0.06);padding:0.3rem 0.65rem;display:inline-block;">↓ Click any row to view submission details &amp; scans</p>
         <div class="attested-list" id="attested-list"></div>
         <button class="recent-load-more" onclick="loadMoreAttested()">Load more attested →</button>
       </div>
@@ -3275,9 +3283,9 @@
         <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         Continue with Google
       </button>
-      <button class="auth-btn" onclick="signIn('apple')">
+      <button class="auth-btn" onclick="alert('Apple sign-in is coming soon. Please use Google sign-in for now.')" title="Coming soon" style="opacity:0.45;cursor:default;position:relative;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Continue with Apple
+        Continue with Apple <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;letter-spacing:0.08em;margin-left:0.4rem;opacity:0.75;">— Coming Soon</span>
       </button>
       <div class="auth-divider">· · ·</div>
       <div style="font-family:'Courier Prime',monospace;font-size:0.58rem;color:var(--text-secondary);line-height:1.6;">
@@ -3440,7 +3448,7 @@
         <div class="upload-zone" id="scan-upload-zone">
           <p>DRAG &amp; DROP SCANS HERE</p>
           <p style="margin-top:0.4rem;opacity:0.6;">or click to browse · JPG, PNG, TIFF, WebP accepted · 300 DPI minimum recommended</p>
-          <p style="margin-top:0.5rem;font-size:0.72rem;color:var(--gold);letter-spacing:0.05em;">Upload front scan first — it will be used as the gallery thumbnail</p>
+          <p style="margin-top:0.75rem;font-size:0.72rem;font-weight:700;color:var(--ink);letter-spacing:0.05em;background:rgba(201,146,42,0.15);border:1px solid rgba(201,146,42,0.4);padding:0.3rem 0.65rem;display:inline-block;">★ Upload front scan first — it will be used as the gallery thumbnail</p>
           <input type="file" id="scan-file-input" multiple accept="image/jpeg,image/png,image/tiff,image/webp"
             style="display:none;" onchange="handleScanFiles(this.files)">
         </div>
@@ -3524,36 +3532,40 @@
         </p>
       </div>
       <div class="gallery-controls">
-        <input type="text" id="gallery-search" placeholder="Search player or back…" oninput="filterGallery()">
-        <select id="gallery-filter-subject" onchange="filterGallery()">
-          <option value="">All subjects</option>
-        </select>
-        <select id="gallery-filter-back" onchange="filterGallery()">
-          <option value="">All backs</option>
-        </select>
-        <select id="gallery-filter-grader" onchange="filterGallery()">
-          <option value="">All graders</option>
-          <option value="PSA">PSA</option>
-          <option value="SGC">SGC</option>
-          <option value="BGS">BGS</option>
-          <option value="CSG">CSG</option>
-        </select>
-        <select id="gallery-filter-grade" onchange="filterGallery()">
-          <option value="">All grades</option>
-          <option value="min_8">Grade 8+ (finest)</option>
-          <option value="min_7">Grade 7+</option>
-          <option value="min_6">Grade 6+</option>
-          <option value="min_5">Grade 5+</option>
-          <option value="max_4">Grade 4 or below (targets)</option>
-          <option value="max_3">Grade 3 or below (targets)</option>
-          <option value="max_2">Grade 2 or below (targets)</option>
-        </select>
-        <select id="gallery-sort" onchange="filterGallery()">
-          <option value="alpha">Sort: A–Z</option>
-          <option value="grade_desc">Sort: Highest grade</option>
-          <option value="grade_asc">Sort: Lowest grade (targets)</option>
-        </select>
-        <span class="gallery-count" id="gallery-count"></span>
+        <div class="gallery-controls-row">
+          <select id="gallery-filter-subject" onchange="filterGallery()">
+            <option value="">All subjects</option>
+          </select>
+          <select id="gallery-filter-back" onchange="filterGallery()">
+            <option value="">All backs</option>
+          </select>
+          <select id="gallery-filter-grade" onchange="filterGallery()">
+            <option value="">All grades</option>
+            <option value="min_8">Grade 8+ (finest)</option>
+            <option value="min_7">Grade 7+</option>
+            <option value="min_6">Grade 6+</option>
+            <option value="min_5">Grade 5+</option>
+            <option value="max_4">Grade 4 or below (targets)</option>
+            <option value="max_3">Grade 3 or below (targets)</option>
+            <option value="max_2">Grade 2 or below (targets)</option>
+          </select>
+          <select id="gallery-filter-grader" onchange="filterGallery()">
+            <option value="">All graders</option>
+            <option value="PSA">PSA</option>
+            <option value="SGC">SGC</option>
+            <option value="BGS">BGS</option>
+            <option value="CSG">CSG</option>
+          </select>
+        </div>
+        <div class="gallery-controls-row">
+          <input type="text" id="gallery-search" placeholder="Search player or back…" oninput="filterGallery()">
+          <select id="gallery-sort" onchange="filterGallery()">
+            <option value="alpha">Sort: A–Z</option>
+            <option value="grade_desc">Sort: Highest grade</option>
+            <option value="grade_asc">Sort: Lowest grade (targets)</option>
+          </select>
+          <span class="gallery-count" id="gallery-count"></span>
+        </div>
       </div>
       <div class="gallery-grid" id="gallery-grid"></div>
       <div class="gallery-load-more" id="gallery-load-more" style="display:none;">
@@ -4715,8 +4727,8 @@ function _renderDetailPanel(c) {
       row.style.cursor = 'pointer';
       row.title = hasScans ? 'View scans & cert details' : 'View cert details';
       const flagBtn = currentUser
-        ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-${s._submissionId}')" title="Flag an issue with this submission">⚑ flag</button>`
-        : `<button class="flag-link" style="opacity:0.35;" onclick="event.stopPropagation();showSection('account')" title="Sign in to flag issues">⚑ flag</button>`;
+        ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-${s._submissionId}')" title="Report a problem with this submission">⚑ Flag Issue</button>`
+        : `<button class="flag-link" style="opacity:0.3;cursor:default;" onclick="event.stopPropagation();" title="Sign in to flag issues">⚑ Flag Issue</button>`;
       row.innerHTML = `
         <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
         <span class="sub-collector">${escapeHtml(s.cl || '')}</span>
