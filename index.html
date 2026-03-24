@@ -2892,6 +2892,19 @@
         <div class="substat"><span class="substat-dot substat-attested"></span><span class="substat-label">Attested</span><strong id="sub-attested">—</strong></div>
         <div class="substat"><span class="substat-dot substat-reported"></span><span class="substat-label">Reported</span><strong id="sub-reported">—</strong></div>
       </div>
+      <div class="stat-pill"><span>Documented Progress</span><strong id="sub-progress">—</strong></div>
+      <div class="stat-substats" style="margin-bottom:0.35rem;">
+        <div class="substat">
+          <span class="substat-dot" style="background:var(--sepia);"></span>
+          <span class="substat-label">Confirmed + Attested</span>
+          <strong id="sub-documented">—</strong>
+        </div>
+        <div class="substat">
+          <span class="substat-dot" style="background:var(--faded);"></span>
+          <span class="substat-label">Avg Finest Known Score</span>
+          <strong id="sub-avg-score">—</strong>
+        </div>
+      </div>
       <div class="stat-pill"><span>Brand-Series (Backs)</span><strong>36</strong></div>
       <div class="stat-pill"><span>Distinct Brands</span><strong>15</strong></div>
       <div class="stat-pill"><span>Distinct Players / Managers</span><strong>392</strong></div>
@@ -3025,6 +3038,14 @@
           </div>
         </div>
 
+        <div id="filter-stats-bar" style="display:none;font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.06em;background:rgba(139,105,20,0.07);border:1px solid var(--rule);padding:0.4rem 0.75rem;margin-bottom:0.5rem;display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;">
+          <span style="color:var(--text-secondary);">Filtered:</span>
+          <span id="fs-total" style="color:var(--ink);font-weight:700;"></span>
+          <span id="fs-confirmed" style="color:var(--forest);"></span>
+          <span id="fs-attested" style="color:var(--aged);"></span>
+          <span id="fs-reported" style="color:var(--text-muted);"></span>
+          <span id="fs-pct" style="color:var(--sepia);font-weight:700;margin-left:auto;"></span>
+        </div>
         <p style="font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.06em;margin:0 0 0.6rem;text-align:right;">Click any row to view submission details &amp; scans</p>
         <div class="checklist-wrap table-wrap">
           <table id="checklist-table">
@@ -3496,6 +3517,9 @@
       </div>
       <div class="gallery-controls">
         <input type="text" id="gallery-search" placeholder="Search player or back…" oninput="filterGallery()">
+        <select id="gallery-filter-subject" onchange="filterGallery()">
+          <option value="">All subjects</option>
+        </select>
         <select id="gallery-filter-back" onchange="filterGallery()">
           <option value="">All backs</option>
         </select>
@@ -3505,6 +3529,21 @@
           <option value="SGC">SGC</option>
           <option value="BGS">BGS</option>
           <option value="CSG">CSG</option>
+        </select>
+        <select id="gallery-filter-grade" onchange="filterGallery()">
+          <option value="">All grades</option>
+          <option value="min_8">Grade 8+ (finest)</option>
+          <option value="min_7">Grade 7+</option>
+          <option value="min_6">Grade 6+</option>
+          <option value="min_5">Grade 5+</option>
+          <option value="max_4">Grade 4 or below (targets)</option>
+          <option value="max_3">Grade 3 or below (targets)</option>
+          <option value="max_2">Grade 2 or below (targets)</option>
+        </select>
+        <select id="gallery-sort" onchange="filterGallery()">
+          <option value="alpha">Sort: A–Z</option>
+          <option value="grade_desc">Sort: Highest grade</option>
+          <option value="grade_asc">Sort: Lowest grade (targets)</option>
         </select>
         <span class="gallery-count" id="gallery-count"></span>
       </div>
@@ -3709,11 +3748,36 @@ function initSubstats(checklist) {
     else if (s === 'Attested')  attested++;
     else                        reported++;
   });
-  const total = confirmed + attested + reported;
-  document.getElementById('sub-total').textContent    = total.toLocaleString();
-  document.getElementById('sub-confirmed').textContent = confirmed.toLocaleString();
-  document.getElementById('sub-reported').textContent  = reported.toLocaleString();
-  document.getElementById('sub-attested').textContent  = attested.toLocaleString();
+  const total      = confirmed + attested + reported;
+  const documented = confirmed + attested;
+  const pct        = total > 0 ? ((documented / total) * 100).toFixed(1) : '0.0';
+  document.getElementById('sub-total').textContent      = total.toLocaleString();
+  document.getElementById('sub-confirmed').textContent  = confirmed.toLocaleString();
+  document.getElementById('sub-reported').textContent   = reported.toLocaleString();
+  document.getElementById('sub-attested').textContent   = attested.toLocaleString();
+  document.getElementById('sub-progress').textContent   = pct + '%';
+  document.getElementById('sub-documented').textContent = documented.toLocaleString() + ' of ' + total.toLocaleString();
+  loadFinestKnownAverages();
+}
+
+async function loadFinestKnownAverages() {
+  try {
+    const { data, error } = await db
+      .from('submissions')
+      .select('grade, grade_numeric')
+      .eq('is_finest_graded', true)
+      .eq('status', 'confirmed')
+      .not('grade_numeric', 'is', null);
+    if (error || !data || data.length === 0) return;
+    const avgScore = data.reduce((sum, r) => sum + r.grade_numeric, 0) / data.length;
+    // Most common grade string for avg grade display
+    const gradeCounts = {};
+    data.forEach(r => { if (r.grade) gradeCounts[r.grade] = (gradeCounts[r.grade] || 0) + 1; });
+    const avgScoreEl = document.getElementById('sub-avg-score');
+    if (avgScoreEl) avgScoreEl.textContent = avgScore.toFixed(2);
+  } catch (err) {
+    console.warn('loadFinestKnownAverages error:', err);
+  }
 }
 </script>
 
@@ -3907,6 +3971,34 @@ function renderTable(data){
   currentData = sortData(buildCardObjects(data));
   currentPage = 0;
   renderPage();
+  updateFilterStats(data);
+}
+
+function updateFilterStats(data) {
+  const bar = document.getElementById('filter-stats-bar');
+  if (!bar) return;
+  const fullSize = (LIVE_CHECKLIST.length ? LIVE_CHECKLIST : CHECKLIST).length;
+  // Only show bar when a filter is actually active
+  if (data.length === fullSize) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  let confirmed = 0, attested = 0, reported = 0;
+  data.forEach(c => {
+    const s = c.status || getStatus(c);
+    if      (s === 'Confirmed') confirmed++;
+    else if (s === 'Attested')  attested++;
+    else                        reported++;
+  });
+  const total      = data.length;
+  const documented = confirmed + attested;
+  const pct        = total > 0 ? ((documented / total) * 100).toFixed(1) : '0.0';
+  document.getElementById('fs-total').textContent     = total.toLocaleString() + ' combinations';
+  document.getElementById('fs-confirmed').textContent = confirmed + ' confirmed';
+  document.getElementById('fs-attested').textContent  = attested  + ' attested';
+  document.getElementById('fs-reported').textContent  = reported  + ' reported';
+  document.getElementById('fs-pct').textContent       = pct + '% documented';
 }
 
 
@@ -6599,6 +6691,14 @@ async function initGallery() {
       a.player.localeCompare(b.player) || a.back.localeCompare(b.back)
     );
 
+    // Populate subject filter dropdown
+    const subjectSel     = document.getElementById('gallery-filter-subject');
+    const allSubjects    = [...new Set(_galleryAllData.map(g => g.player))].sort();
+    allSubjects.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      subjectSel.appendChild(opt);
+    });
     // Populate back filter dropdown
     const backSel  = document.getElementById('gallery-filter-back');
     const allBacks = [...new Set(_galleryAllData.map(g => g.back))].sort();
@@ -6618,17 +6718,40 @@ async function initGallery() {
 }
 
 function filterGallery() {
-  const query  = (document.getElementById('gallery-search')?.value || '').toLowerCase().trim();
-  const back   = document.getElementById('gallery-filter-back')?.value  || '';
-  const grader = document.getElementById('gallery-filter-grader')?.value || '';
+  const query   = (document.getElementById('gallery-search')?.value  || '').toLowerCase().trim();
+  const subject = document.getElementById('gallery-filter-subject')?.value || '';
+  const back    = document.getElementById('gallery-filter-back')?.value    || '';
+  const grader  = document.getElementById('gallery-filter-grader')?.value  || '';
+  const grade   = document.getElementById('gallery-filter-grade')?.value   || '';
+  const sort    = document.getElementById('gallery-sort')?.value            || 'alpha';
 
   _galleryFiltered = _galleryAllData.filter(g => {
-    if (back   && g.back   !== back)                       return false;
-    if (grader && g.grader !== grader)                     return false;
-    if (query  && !g.player.toLowerCase().includes(query)
-               && !g.back.toLowerCase().includes(query))   return false;
+    if (subject && g.player !== subject)                              return false;
+    if (back    && g.back   !== back)                                 return false;
+    if (grader  && g.grader !== grader)                               return false;
+    if (query   && !g.player.toLowerCase().includes(query)
+                && !g.back.toLowerCase().includes(query))             return false;
+    if (grade) {
+      const n = g.gradeNum;
+      if (grade === 'min_8' && n < 8)  return false;
+      if (grade === 'min_7' && n < 7)  return false;
+      if (grade === 'min_6' && n < 6)  return false;
+      if (grade === 'min_5' && n < 5)  return false;
+      if (grade === 'max_4' && n > 4)  return false;
+      if (grade === 'max_3' && n > 3)  return false;
+      if (grade === 'max_2' && n > 2)  return false;
+    }
     return true;
   });
+
+  // Sort
+  if (sort === 'grade_desc') {
+    _galleryFiltered.sort((a, b) => b.gradeNum - a.gradeNum);
+  } else if (sort === 'grade_asc') {
+    _galleryFiltered.sort((a, b) => (a.gradeNum === -1 ? Infinity : a.gradeNum) - (b.gradeNum === -1 ? Infinity : b.gradeNum));
+  } else {
+    _galleryFiltered.sort((a, b) => a.player.localeCompare(b.player) || a.back.localeCompare(b.back));
+  }
 
   _galleryShowing = 0;
   document.getElementById('gallery-grid').innerHTML = '';
