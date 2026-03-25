@@ -4699,6 +4699,8 @@ async function openDetail(c) {
   document.getElementById('detail-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   _renderDetailPanel(c);
+  // Wire carousel magnifier (placeholder now visible in DOM)
+  if (typeof wireCarouselMagnifier === 'function') wireCarouselMagnifier();
   // Load real submissions from Supabase, then re-render with fresh scans
   await loadSubmissionsForCombo(c.player, c.back);
   _renderDetailPanel(c);
@@ -7045,15 +7047,38 @@ function attachMagnifier(img) {
   img.addEventListener('mousemove', (e) => {
     if (!img.src || img.src === window.location.href) return;
 
-    const rect     = img.getBoundingClientRect();
-    const xRatio   = (e.clientX - rect.left)  / rect.width;
-    const yRatio   = (e.clientY - rect.top)   / rect.height;
+    const rect = img.getBoundingClientRect();
 
-    // Background size = natural image rendered at MAG_ZOOM × element size
-    const bgW = rect.width  * MAG_ZOOM;
-    const bgH = rect.height * MAG_ZOOM;
+    // Account for object-fit: contain letterboxing.
+    // Compute the actual rendered image rect within the element box.
+    let rendW = rect.width;
+    let rendH = rect.height;
+    let rendX = rect.left;
+    let rendY = rect.top;
 
-    // Background position — centre the zoomed area on cursor
+    const nat = img.naturalWidth && img.naturalHeight;
+    if (nat) {
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const boxRatio = rect.width / rect.height;
+      if (imgRatio < boxRatio) {
+        // image is taller relative to box — pillarboxed
+        rendW = rect.height * imgRatio;
+        rendX = rect.left + (rect.width - rendW) / 2;
+      } else {
+        // image is wider relative to box — letterboxed
+        rendH = rect.width / imgRatio;
+        rendY = rect.top + (rect.height - rendH) / 2;
+      }
+    }
+
+    // Clamp cursor to rendered image area
+    const cx = Math.max(rendX, Math.min(e.clientX, rendX + rendW));
+    const cy = Math.max(rendY, Math.min(e.clientY, rendY + rendH));
+    const xRatio = (cx - rendX) / rendW;
+    const yRatio = (cy - rendY) / rendH;
+
+    const bgW = rendW  * MAG_ZOOM;
+    const bgH = rendH  * MAG_ZOOM;
     const bgX = -(xRatio * bgW - MAG_SIZE / 2);
     const bgY = -(yRatio * bgH - MAG_SIZE / 2);
 
@@ -7061,7 +7086,7 @@ function attachMagnifier(img) {
     _mag.style.backgroundSize     = `${bgW}px ${bgH}px`;
     _mag.style.backgroundPosition = `${bgX}px ${bgY}px`;
 
-    // Position lens: default top-right of cursor; flip if near edges
+    // Position lens — default right of cursor, flip if near edges
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     let lx = e.clientX + MAG_OFFSET;
@@ -7082,6 +7107,68 @@ function attachMagnifierToAll() {
   // Gallery card images
   document.querySelectorAll('.gallery-card-img img').forEach(attachMagnifier);
 }
+
+// ── Carousel placeholder — wire magnifier at the container level ──────────────
+function wireCarouselMagnifier() {
+  const placeholder = document.querySelector('.card-placeholder');
+  if (!placeholder || placeholder._magWired) return;
+  placeholder._magWired = true;
+
+  placeholder.addEventListener('mousemove', (e) => {
+    const img = placeholder.querySelector('img.carousel-img');
+    if (!img || !img.src || img.src === window.location.href) return;
+
+    _mag.classList.add('active');
+    _magActive = true;
+
+    const rect = img.getBoundingClientRect();
+    let rendW = rect.width, rendH = rect.height;
+    let rendX = rect.left,  rendY = rect.top;
+
+    if (img.naturalWidth && img.naturalHeight) {
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const boxRatio = rect.width / rect.height;
+      if (imgRatio < boxRatio) {
+        rendW = rect.height * imgRatio;
+        rendX = rect.left + (rect.width - rendW) / 2;
+      } else {
+        rendH = rect.width / imgRatio;
+        rendY = rect.top + (rect.height - rendH) / 2;
+      }
+    }
+
+    const cx = Math.max(rendX, Math.min(e.clientX, rendX + rendW));
+    const cy = Math.max(rendY, Math.min(e.clientY, rendY + rendH));
+    const xRatio = (cx - rendX) / rendW;
+    const yRatio = (cy - rendY) / rendH;
+
+    const bgW = rendW * MAG_ZOOM;
+    const bgH = rendH * MAG_ZOOM;
+    const bgX = -(xRatio * bgW - MAG_SIZE / 2);
+    const bgY = -(yRatio * bgH - MAG_SIZE / 2);
+
+    _mag.style.backgroundImage    = `url('${img.currentSrc || img.src}')`;
+    _mag.style.backgroundSize     = `${bgW}px ${bgH}px`;
+    _mag.style.backgroundPosition = `${bgX}px ${bgY}px`;
+
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let lx = e.clientX + MAG_OFFSET;
+    let ly = e.clientY - MAG_SIZE / 2;
+    if (lx + MAG_SIZE > vw - 10) lx = e.clientX - MAG_SIZE - MAG_OFFSET;
+    if (ly < 10) ly = 10;
+    if (ly + MAG_SIZE > vh - 10) ly = vh - MAG_SIZE - 10;
+    _mag.style.left = lx + 'px';
+    _mag.style.top  = ly + 'px';
+  });
+
+  placeholder.addEventListener('mouseleave', () => {
+    _mag.classList.remove('active');
+    _magActive = false;
+  });
+}
+
+// Call once on load in case panel is somehow already open
+wireCarouselMagnifier();
 
 // Run once on load, then observe DOM for dynamically added images
 attachMagnifierToAll();
