@@ -4157,14 +4157,22 @@ async function loadAllSubmissions() {
       .from('submissions')
       .select(`
         id, grade, grader, cert_number, status, submitted_at,
-        player, back,
-        users!submitted_by ( handle )
+        users!submitted_by ( handle ),
+        combinations (
+          players ( name ),
+          backs ( name )
+        )
       `)
       .order('submitted_at', { ascending: false })
       .limit(300);
 
     if (error) throw error;
-    _adminAllSubs = data || [];
+    // Normalize player/back onto each row for easy access
+    _adminAllSubs = (data || []).map(s => ({
+      ...s,
+      player: s.combinations?.players?.name || '—',
+      back:   s.combinations?.backs?.name   || '—',
+    }));
     if (countEl) countEl.textContent = _adminAllSubs.length;
     renderAdminDeleteList(_adminAllSubs);
   } catch (err) {
