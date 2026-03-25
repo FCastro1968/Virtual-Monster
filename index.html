@@ -6548,8 +6548,6 @@ async function submitCard() {
     showSubmitSuccess(player, back, grade, status);
 
     // Reload the checklist from Supabase, then patch the submitted row.
-    // await ensures the patch runs after the reload, so it wins over any
-    // stale status the DB view returns if the write hasn't propagated yet.
     const newStatus = status === 'confirmed' ? 'Confirmed'
                     : status === 'attested'  ? 'Attested'
                     : null;
@@ -6565,6 +6563,13 @@ async function submitCard() {
           liveRow.status = newStatus;
         }
       }
+    }
+
+    // Refresh Recent & Attested feeds so the new submission appears immediately
+    if (status === 'confirmed') {
+      loadRecentConfirmedFromSupabase();
+    } else if (status === 'attested') {
+      loadAttestedFromSupabase();
     }
 
   } catch (err) {
