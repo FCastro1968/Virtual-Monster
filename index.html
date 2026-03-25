@@ -3598,6 +3598,33 @@
 
       <div class="section-rule" style="margin-bottom:2rem;"><h2>Admin — Review Queue</h2></div>
 
+      <!-- ── ALL SUBMISSIONS — DELETE ── -->
+      <div style="margin-bottom:3rem;">
+        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
+          All Submissions — Delete
+          <span id="admin-all-count" style="margin-left:1rem;background:var(--ink);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
+        </div>
+        <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.6;">
+          Search any confirmed, attested, or pending submission to permanently delete it. Deletion cascades to associated scans.
+        </p>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;">
+          <input type="text" id="admin-delete-search" placeholder="Search by player or back…"
+            style="flex:1;font-family:'Courier Prime',monospace;font-size:0.78rem;padding:0.45rem 0.75rem;border:1px solid var(--rule);background:var(--parchment);color:var(--ink);outline:none;"
+            oninput="filterAdminDeleteList()">
+          <select id="admin-delete-status-filter" onchange="filterAdminDeleteList()"
+            style="font-family:'Courier Prime',monospace;font-size:0.72rem;padding:0.45rem 0.65rem;border:1px solid var(--rule);background:var(--parchment);color:var(--ink);outline:none;">
+            <option value="">All statuses</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="attested">Attested</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div id="admin-all-list">
+          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
+        </div>
+      </div>
+
       <!-- ── PENDING SGC SUBMISSIONS ── -->
       <div style="margin-bottom:3rem;">
         <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
@@ -4113,7 +4140,117 @@ async function checkAdminStatus(user) {
 }
 
 async function loadAdminQueues() {
-  await Promise.all([loadPendingSubmissions(), loadFlaggedSubmissions(), loadIssueFlags()]);
+  await Promise.all([loadAllSubmissions(), loadPendingSubmissions(), loadFlaggedSubmissions(), loadIssueFlags()]);
+}
+
+// ── All Submissions — Delete queue ───────────────────────────────────────────
+let _adminAllSubs = []; // cache for client-side filter
+
+async function loadAllSubmissions() {
+  const list    = document.getElementById('admin-all-list');
+  const countEl = document.getElementById('admin-all-count');
+  if (!list) return;
+  list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>';
+
+  try {
+    const { data, error } = await db
+      .from('submissions')
+      .select(`
+        id, grade, grader, cert_number, status, submitted_at,
+        player, back,
+        users!submitted_by ( handle )
+      `)
+      .order('submitted_at', { ascending: false })
+      .limit(300);
+
+    if (error) throw error;
+    _adminAllSubs = data || [];
+    if (countEl) countEl.textContent = _adminAllSubs.length;
+    renderAdminDeleteList(_adminAllSubs);
+  } catch (err) {
+    list.innerHTML = `<p style="color:var(--rust);font-family:'Courier Prime',monospace;font-size:0.72rem;">Error loading submissions: ${err.message}</p>`;
+  }
+}
+
+function filterAdminDeleteList() {
+  const q      = (document.getElementById('admin-delete-search')?.value || '').toLowerCase().trim();
+  const status = document.getElementById('admin-delete-status-filter')?.value || '';
+  const filtered = _adminAllSubs.filter(s => {
+    const matchText = !q || (s.player||'').toLowerCase().includes(q) || (s.back||'').toLowerCase().includes(q);
+    const matchStatus = !status || s.status === status;
+    return matchText && matchStatus;
+  });
+  renderAdminDeleteList(filtered);
+}
+
+function renderAdminDeleteList(subs) {
+  const list = document.getElementById('admin-all-list');
+  if (!list) return;
+  if (!subs.length) {
+    list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No submissions match.</p>';
+    return;
+  }
+  list.innerHTML = '';
+  subs.forEach(s => {
+    const handle  = s.users?.handle || 'unknown';
+    const grade   = s.grade || '—';
+    const grader  = s.grader || '';
+    const cert    = s.cert_number ? `cert #${s.cert_number}` : 'no cert';
+    const date    = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString() : '—';
+    const statusColor = s.status === 'confirmed' ? 'var(--forest)' : s.status === 'attested' ? 'var(--aged)' : s.status === 'rejected' ? 'var(--text-muted)' : 'var(--rust)';
+
+    const card = document.createElement('div');
+    card.id = 'admin-all-' + s.id;
+    card.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.65rem 0.9rem;border:1px solid var(--rule);background:var(--parchment);margin-bottom:0.5rem;flex-wrap:wrap;';
+    card.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:700;color:var(--ink);">${escapeHtml(s.player||'—')}</div>
+        <div style="font-family:'Courier Prime',monospace;font-size:0.62rem;color:var(--text-secondary);margin-top:0.15rem;">${escapeHtml(s.back||'—')}</div>
+      </div>
+      <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-secondary);white-space:nowrap;">
+        ${escapeHtml(grade)} ${escapeHtml(grader)} · ${escapeHtml(cert)}<br>
+        by <strong>${escapeHtml(handle)}</strong> · ${date}
+      </div>
+      <div style="font-family:'Courier Prime',monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:${statusColor};white-space:nowrap;font-weight:700;">
+        ${s.status}
+      </div>
+      <button class="admin-btn admin-btn-reject" onclick="deleteSubmission('${s.id}', '${escapeHtml(s.player||'')}', '${escapeHtml(s.back||'')}')">
+        ✕ Delete
+      </button>
+    `;
+    list.appendChild(card);
+  });
+}
+
+async function deleteSubmission(submissionId, player, back) {
+  const confirmed = window.confirm(`Permanently delete this submission?\n\n${player} / ${back}\n\nThis cannot be undone.`);
+  if (!confirmed) return;
+
+  const card = document.getElementById('admin-all-' + submissionId);
+  if (card) card.style.opacity = '0.4';
+
+  try {
+    // Delete scans first (in case FK doesn't cascade)
+    await db.from('scans').delete().eq('submission_id', submissionId);
+    // Delete votes
+    await db.from('votes').delete().eq('submission_id', submissionId);
+    // Delete the submission
+    const { error } = await db.from('submissions').delete().eq('id', submissionId);
+    if (error) throw error;
+
+    // Remove from local cache and UI
+    _adminAllSubs = _adminAllSubs.filter(s => s.id !== submissionId);
+    const countEl = document.getElementById('admin-all-count');
+    if (countEl) countEl.textContent = _adminAllSubs.length;
+    if (card) card.remove();
+
+    // Refresh checklist so status recalculates
+    loadChecklistFromSupabase();
+
+  } catch (err) {
+    if (card) card.style.opacity = '1';
+    alert('Delete failed: ' + err.message);
+  }
 }
 
 // ── Pending SGC submissions ──
