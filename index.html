@@ -2528,7 +2528,7 @@
     cursor: zoom-in;
     transition: opacity 0.2s;
   }
-  .scan-img:hover { opacity: 0.88; }
+  .scan-img:hover { opacity: 1; }
   .scan-img-label {
     font-family: 'Courier Prime', monospace;
     font-size: 0.58rem;
@@ -2847,6 +2847,23 @@
   }
 
   .fade-in-up { animation: fadeInUp 0.25s ease forwards; }
+
+  /* ── SCAN MAGNIFIER ── */
+  #scan-magnifier {
+    position: fixed;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 2px solid var(--sepia);
+    box-shadow: 0 4px 24px rgba(26,18,8,0.45);
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+    overflow: hidden;
+    background-color: var(--parchment);
+    background-repeat: no-repeat;
+  }
+  #scan-magnifier.active { display: block; }
 
 </style>
 <script defer src="/_vercel/insights/script.js"></script>
@@ -4648,12 +4665,13 @@ function _renderScan() {
   } else {
     const img = document.createElement('img');
     img.className = 'carousel-img';
-    img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;margin:auto;cursor:zoom-in;';
+    img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;margin:auto;cursor:crosshair;';
     img.alt = 'Scan ' + (_scanIndex + 1);
     img.onclick = () => window.open(url, '_blank');
     img.onerror = () => { img.style.display = 'none'; };
     placeholder.insertBefore(img, placeholder.querySelector('.scan-arrow.left'));
     img.src = url;
+    if (typeof attachMagnifier === 'function') attachMagnifier(img);
   }
 
   if (prev) prev.disabled = _scanIndex === 0;
@@ -6989,6 +7007,89 @@ async function checkHandleSetup(user) {
     if (headerHandle) headerHandle.textContent = data.handle;
   }
 }
+</script>
+
+<!-- ── SCAN MAGNIFIER ── -->
+<div id="scan-magnifier"></div>
+
+<script>
+// ── UNIVERSAL SCAN MAGNIFIER ─────────────────────────────────────────────────
+// Attaches to any <img> that has data-magnify="true" or class "scan-img" or
+// class "carousel-img" or is inside .gallery-card-img.
+// Call attachMagnifier(img) to wire it up dynamically.
+
+const _mag = document.getElementById('scan-magnifier');
+const MAG_SIZE   = 220;   // lens diameter px
+const MAG_ZOOM   = 2.8;   // zoom multiplier
+const MAG_OFFSET = 18;    // px gap between cursor and lens edge
+
+let _magActive = false;
+
+function attachMagnifier(img) {
+  if (!img || img._magAttached) return;
+  img._magAttached = true;
+  img.style.cursor = 'crosshair';
+
+  img.addEventListener('mouseenter', () => {
+    if (!img.naturalWidth) return; // image not loaded
+    _mag.classList.add('active');
+    _magActive = true;
+  });
+
+  img.addEventListener('mouseleave', () => {
+    _mag.classList.remove('active');
+    _magActive = false;
+  });
+
+  img.addEventListener('mousemove', (e) => {
+    if (!img.naturalWidth) return;
+
+    const rect     = img.getBoundingClientRect();
+    const xRatio   = (e.clientX - rect.left)  / rect.width;
+    const yRatio   = (e.clientY - rect.top)   / rect.height;
+
+    // Background size = natural image rendered at MAG_ZOOM × element size
+    const bgW = rect.width  * MAG_ZOOM;
+    const bgH = rect.height * MAG_ZOOM;
+
+    // Background position — centre the zoomed area on cursor
+    const bgX = -(xRatio * bgW - MAG_SIZE / 2);
+    const bgY = -(yRatio * bgH - MAG_SIZE / 2);
+
+    _mag.style.backgroundImage    = `url('${img.src}')`;
+    _mag.style.backgroundSize     = `${bgW}px ${bgH}px`;
+    _mag.style.backgroundPosition = `${bgX}px ${bgY}px`;
+
+    // Position lens: default top-right of cursor; flip if near edges
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let lx = e.clientX + MAG_OFFSET;
+    let ly = e.clientY - MAG_SIZE / 2;
+
+    if (lx + MAG_SIZE > vw - 10) lx = e.clientX - MAG_SIZE - MAG_OFFSET;
+    if (ly < 10)                  ly = 10;
+    if (ly + MAG_SIZE > vh - 10)  ly = vh - MAG_SIZE - 10;
+
+    _mag.style.left = lx + 'px';
+    _mag.style.top  = ly + 'px';
+  });
+}
+
+// ── Auto-attach to existing .scan-img elements ────────────────────────────────
+function attachMagnifierToAll() {
+  document.querySelectorAll('img.scan-img, img.carousel-img').forEach(attachMagnifier);
+  // Gallery card images
+  document.querySelectorAll('.gallery-card-img img').forEach(attachMagnifier);
+}
+
+// Run once on load, then observe DOM for dynamically added images
+attachMagnifierToAll();
+
+const _magObserver = new MutationObserver(() => attachMagnifierToAll());
+_magObserver.observe(document.body, { childList: true, subtree: true });
+
+// Patch _renderScan to attach magnifier after carousel image is created
+const _origRenderScan = window._renderScan;
 </script>
 
 </body>
