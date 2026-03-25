@@ -6575,6 +6575,7 @@ async function submitCard() {
     // Refresh Finest Known Gallery data so it's current next time the tab is opened
     // (or immediately if already open)
     _galleryAllData = [];
+    _galleryInitDone = false;
     initGallery();
 
   } catch (err) {
