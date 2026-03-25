@@ -702,7 +702,7 @@
     top: 50%;
     transform: translateY(-50%);
     z-index: 10;
-    background: rgba(44,36,28,0.55);
+    background: rgba(44,36,28,0.45);
     color: #f5eed8;
     border: none;
     width: 2rem;
@@ -712,12 +712,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    transition: opacity 0.15s;
+    opacity: 1;
+    transition: opacity 0.15s, background 0.15s;
     border-radius: 2px;
   }
   .card-placeholder:hover .scan-arrow { opacity: 1; }
-  .scan-arrow:hover { background: rgba(44,36,28,0.8); }
+  .scan-arrow:hover { background: rgba(44,36,28,0.85); }
   .scan-arrow.left  { left: 0; }
   .scan-arrow.right { right: 0; }
   .scan-arrow:disabled { opacity: 0 !important; cursor: default; }
@@ -4757,7 +4757,7 @@ function _renderDetailPanel(c) {
         <span class="sub-collector">${escapeHtml(s.cl || '')}</span>
         <span class="sub-cert">cert #${escapeHtml(s.ct || '')}</span>
         <span class="sub-grade">${escapeHtml(s.g || '')}</span>
-        <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">${hasScans ? '🔍' : ''}</span>
+        ${hasScans ? `<span style="font-family:'Courier Prime',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.15rem 0.45rem;border:1px solid var(--rule);color:var(--text-secondary);background:var(--parchment);white-space:nowrap;">⊕ Scans</span>` : ''}
         ${flagBtn}
       `;
       row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
@@ -4805,7 +4805,7 @@ function _renderDetailPanel(c) {
         <span class="sub-collector">${escapeHtml(s.cl || '')}</span>
         <span class="sub-cert" style="font-style:italic;">ungraded · ${hasScans ? 'scans on file' : 'no scans'}</span>
         <span class="sub-grade" style="color:var(--text-secondary);">Raw</span>
-        <span style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:0.25rem;">${hasScans ? '🔍' : ''}</span>
+        ${hasScans ? `<span style="font-family:'Courier Prime',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.15rem 0.45rem;border:1px solid var(--rule);color:var(--text-secondary);background:var(--parchment);white-space:nowrap;">⊕ Scans</span>` : ''}
       `;
       row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
       row.addEventListener('mouseleave', () => row.style.background = '');
