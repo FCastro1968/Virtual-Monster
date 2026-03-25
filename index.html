@@ -4662,6 +4662,7 @@ function _renderScan() {
   const url = _scanUrls[_scanIndex];
   if (existingImg) {
     existingImg.src = url;
+    if (typeof attachMagnifier === 'function') attachMagnifier(existingImg);
   } else {
     const img = document.createElement('img');
     img.className = 'carousel-img';
@@ -7031,7 +7032,7 @@ function attachMagnifier(img) {
   img.style.cursor = 'crosshair';
 
   img.addEventListener('mouseenter', () => {
-    if (!img.naturalWidth) return; // image not loaded
+    if (!img.src || img.src === window.location.href) return;
     _mag.classList.add('active');
     _magActive = true;
   });
@@ -7042,7 +7043,7 @@ function attachMagnifier(img) {
   });
 
   img.addEventListener('mousemove', (e) => {
-    if (!img.naturalWidth) return;
+    if (!img.src || img.src === window.location.href) return;
 
     const rect     = img.getBoundingClientRect();
     const xRatio   = (e.clientX - rect.left)  / rect.width;
@@ -7056,7 +7057,7 @@ function attachMagnifier(img) {
     const bgX = -(xRatio * bgW - MAG_SIZE / 2);
     const bgY = -(yRatio * bgH - MAG_SIZE / 2);
 
-    _mag.style.backgroundImage    = `url('${img.src}')`;
+    _mag.style.backgroundImage    = `url('${img.currentSrc || img.src}')`;
     _mag.style.backgroundSize     = `${bgW}px ${bgH}px`;
     _mag.style.backgroundPosition = `${bgX}px ${bgY}px`;
 
