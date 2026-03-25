@@ -3598,33 +3598,6 @@
 
       <div class="section-rule" style="margin-bottom:2rem;"><h2>Admin — Review Queue</h2></div>
 
-      <!-- ── ALL SUBMISSIONS — DELETE ── -->
-      <div style="margin-bottom:3rem;">
-        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
-          All Submissions — Delete
-          <span id="admin-all-count" style="margin-left:1rem;background:var(--ink);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
-        </div>
-        <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.6;">
-          Search any confirmed, attested, or pending submission to permanently delete it. Deletion cascades to associated scans.
-        </p>
-        <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;">
-          <input type="text" id="admin-delete-search" placeholder="Search by player or back…"
-            style="flex:1;font-family:'Courier Prime',monospace;font-size:0.78rem;padding:0.45rem 0.75rem;border:1px solid var(--rule);background:var(--parchment);color:var(--ink);outline:none;"
-            oninput="filterAdminDeleteList()">
-          <select id="admin-delete-status-filter" onchange="filterAdminDeleteList()"
-            style="font-family:'Courier Prime',monospace;font-size:0.72rem;padding:0.45rem 0.65rem;border:1px solid var(--rule);background:var(--parchment);color:var(--ink);outline:none;">
-            <option value="">All statuses</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="attested">Attested</option>
-            <option value="pending">Pending</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
-        <div id="admin-all-list">
-          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
-        </div>
-      </div>
-
       <!-- ── PENDING SGC SUBMISSIONS ── -->
       <div style="margin-bottom:3rem;">
         <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
@@ -3663,6 +3636,33 @@
           Issues flagged by community members on confirmed or attested submissions — wrong back, incorrect player, duplicate cert, or other data errors.
         </p>
         <div id="admin-issues-list">
+          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
+        </div>
+      </div>
+
+      <!-- ── ALL SUBMISSIONS — DELETE ── -->
+      <div style="margin-bottom:3rem;">
+        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
+          All Submissions — Delete
+          <span id="admin-all-count" style="margin-left:1rem;background:var(--ink);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
+        </div>
+        <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.6;">
+          Search any confirmed, attested, or pending submission to reject and hide it from all public views.
+        </p>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;">
+          <input type="text" id="admin-delete-search" placeholder="Search by player or back…"
+            style="flex:1;font-family:'Courier Prime',monospace;font-size:0.78rem;padding:0.45rem 0.75rem;border:1px solid var(--rule);background:var(--parchment);color:var(--ink);outline:none;"
+            oninput="filterAdminDeleteList()">
+          <select id="admin-delete-status-filter" onchange="filterAdminDeleteList()"
+            style="font-family:'Courier Prime',monospace;font-size:0.72rem;padding:0.45rem 0.65rem;border:1px solid var(--rule);background:var(--parchment);color:var(--ink);outline:none;">
+            <option value="">All statuses</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="attested">Attested</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div id="admin-all-list">
           <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
         </div>
       </div>
