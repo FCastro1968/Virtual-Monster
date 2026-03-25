@@ -6572,6 +6572,11 @@ async function submitCard() {
       loadAttestedFromSupabase();
     }
 
+    // Refresh Finest Known Gallery data so it's current next time the tab is opened
+    // (or immediately if already open)
+    _galleryAllData = [];
+    initGallery();
+
   } catch (err) {
     console.error('Submission error:', err);
     alert('Submission failed: ' + err.message);
