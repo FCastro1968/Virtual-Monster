@@ -4231,19 +4231,18 @@ function renderAdminDeleteList(subs) {
 }
 
 async function deleteSubmission(submissionId, player, back) {
-  const confirmed = window.confirm(`Permanently delete this submission?\n\n${player} / ${back}\n\nThis cannot be undone.`);
+  const confirmed = window.confirm(`Permanently remove this submission?\n\n${player} / ${back}\n\nIt will be marked rejected and hidden from all public views.`);
   if (!confirmed) return;
 
   const card = document.getElementById('admin-all-' + submissionId);
   if (card) card.style.opacity = '0.4';
 
   try {
-    // Delete scans first (in case FK doesn't cascade)
-    await db.from('scans').delete().eq('submission_id', submissionId);
-    // Delete votes
-    await db.from('votes').delete().eq('submission_id', submissionId);
-    // Delete the submission
-    const { error } = await db.from('submissions').delete().eq('id', submissionId);
+    const { error } = await db
+      .from('submissions')
+      .update({ status: 'rejected', is_finest_graded: false, updated_at: new Date().toISOString() })
+      .eq('id', submissionId);
+
     if (error) throw error;
 
     // Remove from local cache and UI
