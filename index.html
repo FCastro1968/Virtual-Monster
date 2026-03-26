@@ -6957,11 +6957,11 @@ const PROGRESS_COLORS = {
   'Piedmont':                 '#3366FF',   // blue
   'Sovereign':                '#97CB04',   // apple green (all Sovereign, including Apple Green)
   'Sweet Caporal':            '#FF6600',   // orange
-  'American Beauty':          '#97CB04',   // yellow-green (same for all Am. Beauty)
-  'Broadleaf':                '#FEFF99',   // light yellow
+  'American Beauty':          '#5A8A00',   // darker green than Sovereign
+  'Broadleaf':                '#FFB366',   // light orange (lighter than Sweet Caporal)
   'Cycle':                    '#FEFF99',   // pale yellow
   'Drum':                     '#9966CC',   // purple
-  'Brown Hindu':              '#FFCC00',   // gold
+  'Brown Hindu':              '#8B4513',   // brown
   'Red Hindu':                '#FFCC00',   // gold
   'Black Lenox':              '#CCCCFE',   // lavender
   'Brown Lenox':              '#CCCCFE',   // lavender
@@ -7073,15 +7073,13 @@ async function initProgress() {
     });
     const groupPct = groupTotal > 0 ? Math.round(groupConfirmed / groupTotal * 100) : 0;
 
-    // Group header row
+    // Group header row — use same 4-column structure as data rows for alignment
     const hdr = document.createElement('tr');
     hdr.className = 'progress-group-header';
     hdr.innerHTML = `
-      <td colspan="4">
-        ${group.label}
-        <span class="group-pct">${groupPct}%</span>
-        <span class="group-totals">${groupConfirmed.toLocaleString()} / ${groupTotal.toLocaleString()}</span>
-      </td>
+      <td colspan="2" style="padding:0.55rem 0.75rem;font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:700;color:var(--ink);">${group.label}</td>
+      <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${groupConfirmed.toLocaleString()} / ${groupTotal.toLocaleString()}</td>
+      <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--rust);white-space:nowrap;">${groupPct}%</td>
     `;
     tbody.appendChild(hdr);
 
@@ -7092,8 +7090,7 @@ async function initProgress() {
       const pct       = total > 0 ? Math.round(confirmed / total * 100) : 0;
       const barWidth  = total > 0 ? (confirmed / total * 100).toFixed(1) : 0;
       const color     = getProgressColor(back);
-      // % text color: use the bar color directly, but fall back to a dark tone for very light colors
-      const pctColor  = _isLightColor(color) ? 'var(--text-secondary)' : color;
+      const pctColor  = 'var(--text-primary)';
 
       const row = document.createElement('tr');
       row.className = 'progress-row';
