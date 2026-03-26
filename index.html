@@ -3159,7 +3159,7 @@
 
         <div class="filter-group">
           <label class="filter-label">League</label>
-          <select id="league-filter" class="filter-select" onchange="filterTable()">
+          <select id="league-filter" class="filter-select" onchange="onLeagueFilter()">
             <option value="">All Leagues</option>
             <option value="NL">National League (204)</option>
             <option value="AL">American League (186)</option>
@@ -3169,6 +3169,13 @@
             <option value="VSL">Virginia State League (12)</option>
             <option value="SAL">South Atlantic League (10)</option>
             <option value="TXL">Texas League (6)</option>
+          </select>
+        </div>
+
+        <div class="filter-group" id="team-filter-group">
+          <label class="filter-label">Team</label>
+          <select id="team-filter" class="filter-select" onchange="filterTable()">
+            <option value="">All Teams</option>
           </select>
         </div>
 
@@ -3932,6 +3939,7 @@ async function loadChecklistFromSupabase() {
     console.log(`Loaded ${converted.length} combinations from Supabase`);
     LIVE_CHECKLIST.length = 0;
     converted.forEach(c => LIVE_CHECKLIST.push(c));
+    populateTeamDropdown(document.getElementById('league-filter') ? document.getElementById('league-filter').value : '');
     renderTable(converted);
     initSubstats(converted);
 
@@ -4745,7 +4753,7 @@ const TEAM_MAP={
   'Greminger':'Montgomery',
   'Griffith (Batting)':'Cincinnati',
   'Griffith (Portrait)':'Cincinnati',
-  'Grimshaw':'Toronto ',
+  'Grimshaw':'Toronto ',
   'Groom':'Washington',
   'Guiheen':'Portsmouth',
   'Hahn':'Chicago Amer.',
@@ -4797,7 +4805,7 @@ const TEAM_MAP={
   'Karger':'Cincinnati',
   'Keeler (Batting)':'New York Amer.',
   'Keeler (Portrait)':'New York Amer.',
-  'Kelley':'Toronto ',
+  'Kelley':'Toronto ',
   'Kiernan':'Columbia',
   'Killian (Pitching)':'Detroit',
   'Killian (Portrait)':'Detroit',
@@ -4865,7 +4873,7 @@ const TEAM_MAP={
   'McCormick':'New York Nat\'l',
   'McElveen':'Brooklyn',
   'McGann':'Milwaukee',
-  'McGinley':'Toronto ',
+  'McGinley':'Toronto ',
   'McGinnity':'Newark',
   'McGlynn':'Milwaukee',
   'McGraw (Finger in Air)':'New York Nat\'l',
@@ -4966,7 +4974,7 @@ const TEAM_MAP={
   'Rossman':'Detroit',
   'Rucker (Portrait)':'Brooklyn',
   'Rucker (Throwing)':'Brooklyn',
-  'Rudolph':'Toronto ',
+  'Rudolph':'Toronto ',
   'Ryan':'Roanoke',
   'Schaeffer (Detroit)':'Detroit',
   'Schaeffer (Washington)':'Washington',
@@ -5804,6 +5812,7 @@ function filterTable() {
   const seriesSel  = document.getElementById('series-filter') ? document.getElementById('series-filter').value : '';
 
   const leagueSel  = document.getElementById('league-filter') ? document.getElementById('league-filter').value : '';
+  const teamSel    = document.getElementById('team-filter')   ? document.getElementById('team-filter').value   : '';
   const filtered = (LIVE_CHECKLIST.length ? LIVE_CHECKLIST : CHECKLIST).filter(c => {
     const nameMatch   = !nameInput    || c.p.toLowerCase().includes(nameInput);
     const brandMatch  = !activeBrand  || brandOf(c.b) === activeBrand;
@@ -5814,9 +5823,40 @@ function filterTable() {
     const statusMatch = !statusSel    || status === statusSel;
     const seriesMatch = !seriesSel    || c.s === seriesSel;
     const leagueMatch = !leagueSel    || LEAGUE_MAP[c.p] === leagueSel;
-    return nameMatch && brandMatch && tagMatch && hofMatch && statusMatch && seriesMatch && leagueMatch;
+    const teamMatch   = !teamSel      || TEAM_MAP[c.p]   === teamSel;
+    return nameMatch && brandMatch && tagMatch && hofMatch && statusMatch && seriesMatch && leagueMatch && teamMatch;
   });
   renderTable(filtered);
+}
+
+function populateTeamDropdown(leagueAbbrev) {
+  const sel = document.getElementById('team-filter');
+  if (!sel) return;
+  const abbrevToFull = {
+    NL:'National League', AL:'American League', EL:'Eastern League',
+    AA:'American Association', SA:'Southern Association',
+    SAL:'South Atlantic League', VSL:'Virginia State League', TXL:'Texas League'
+  };
+  const leagueFull = abbrevToFull[leagueAbbrev] || '';
+  // Collect teams relevant to the selected league (or all teams)
+  const teamSet = new Set();
+  const cl = LIVE_CHECKLIST.length ? LIVE_CHECKLIST : CHECKLIST;
+  cl.forEach(c => {
+    if (!leagueAbbrev || LEAGUE_MAP[c.p] === leagueAbbrev) {
+      const t = TEAM_MAP[c.p];
+      if (t) teamSet.add(t);
+    }
+  });
+  const teams = Array.from(teamSet).sort();
+  sel.innerHTML = '<option value="">All Teams</option>' +
+    teams.map(t => `<option value="${t}">${t}</option>`).join('');
+}
+
+function onLeagueFilter() {
+  const leagueSel = document.getElementById('league-filter').value;
+  // Reset team filter then repopulate for the chosen league
+  populateTeamDropdown(leagueSel);
+  filterTable();
 }
 
 function onBrandFilter() {
@@ -5850,6 +5890,7 @@ function clearFilters() {
     t.style.display = '';
   });
   document.querySelectorAll('.filter-select').forEach(s => s.selectedIndex = 0);
+  populateTeamDropdown(''); // repopulate with all teams, reset selection
   const hint = document.getElementById('series-tags-hint');
   if (hint) hint.textContent = '(select a brand to filter)';
   renderTable(LIVE_CHECKLIST.length ? LIVE_CHECKLIST : CHECKLIST);
@@ -8394,6 +8435,7 @@ function galleryLoadMore() {
 }
 
 // ── LOAD CHECKLIST — try Supabase first, fall back to hardcoded ──
+populateTeamDropdown('');
 loadChecklistFromSupabase();
 
 
