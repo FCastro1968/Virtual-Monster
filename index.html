@@ -1407,6 +1407,35 @@
     font-size: 0.82rem;
     min-width: 3.5rem;
   }
+  /* ── Progress sub-tabs ── */
+  .progress-subtab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--rule);
+    margin-bottom: 1.8rem;
+  }
+  .progress-subtab {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.55rem 1.4rem;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s;
+  }
+  .progress-subtab:hover { color: var(--ink); }
+  .progress-subtab.active {
+    color: var(--ink);
+    border-bottom-color: var(--rust);
+    font-weight: 700;
+  }
+  .progress-subpanel { display: none; }
+  .progress-subpanel.active { display: block; }
   .admin-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
   .admin-player { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 0.95rem; color: var(--ink); }
   .admin-back { font-family: 'Courier Prime', monospace; font-size: 0.65rem; letter-spacing: 0.06em; color: var(--text-secondary); margin-top: 0.2rem; }
@@ -3673,20 +3702,28 @@
       <div class="section-rule" style="margin-bottom:1.5rem;">
         <h2>Archive Progress</h2>
       </div>
-      <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);letter-spacing:0.04em;margin-bottom:1.8rem;">
-        Confirmed cards as a share of the known superset, grouped by series and sorted alphabetically within each group.
-      </p>
-      <div id="progress-table-wrap">
-        <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+      <!-- Sub-tab bar -->
+      <div class="progress-subtab-bar">
+        <button class="progress-subtab active" onclick="switchProgressTab('series')">By Series &amp; Back</button>
+        <button class="progress-subtab"        onclick="switchProgressTab('league')">By League &amp; Team</button>
       </div>
-      <div class="section-rule" style="margin-top:2.5rem;margin-bottom:1.5rem;">
-        <h2>By League &amp; Team</h2>
+      <!-- Panel: Series & Back -->
+      <div id="progress-panel-series" class="progress-subpanel active">
+        <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);letter-spacing:0.04em;margin-bottom:1.8rem;">
+          Confirmed cards as a share of the known superset, grouped by series and sorted alphabetically within each group.
+        </p>
+        <div id="progress-table-wrap">
+          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+        </div>
       </div>
-      <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);letter-spacing:0.04em;margin-bottom:1.8rem;">
-        Confirmed cards as a share of the known superset, grouped by league then team.
-      </p>
-      <div id="progress-league-wrap">
-        <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+      <!-- Panel: League & Team -->
+      <div id="progress-panel-league" class="progress-subpanel">
+        <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);letter-spacing:0.04em;margin-bottom:1.8rem;">
+          Confirmed cards as a share of the known superset, grouped by league then team.
+        </p>
+        <div id="progress-league-wrap">
+          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+        </div>
       </div>
     </div>
   </div>
@@ -7080,6 +7117,20 @@ const PROGRESS_GROUPS = [
 ];
 
 let _progressInitDone = false;
+let _leagueProgressInitDone = false;
+
+function switchProgressTab(tab) {
+  document.querySelectorAll('.progress-subtab').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && tab === 'series') || (i === 1 && tab === 'league'));
+  });
+  document.getElementById('progress-panel-series').classList.toggle('active', tab === 'series');
+  document.getElementById('progress-panel-league').classList.toggle('active', tab === 'league');
+  // Lazy-init league tab on first visit
+  if (tab === 'league' && !_leagueProgressInitDone) {
+    _leagueProgressInitDone = true;
+    initLeagueProgress();
+  }
+}
 
 async function initProgress() {
   if (_progressInitDone) return;
@@ -7200,9 +7251,6 @@ async function initProgress() {
 
   wrap.innerHTML = '';
   wrap.appendChild(table);
-
-  // Kick off league/team progress in parallel
-  initLeagueProgress();
 }
 
 // ── LEAGUE / TEAM PROGRESS ────────────────────────────────────────────────────
