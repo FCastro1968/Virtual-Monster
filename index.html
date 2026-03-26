@@ -7007,20 +7007,33 @@ async function initProgress() {
   _progressInitDone = true;
 
   const wrap = document.getElementById('progress-table-wrap');
+  wrap.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>';
 
-  // Count confirmed cards per back from CHECKLIST
-  // CHECKLIST entries have .b (back) and status is derived via getStatus()
-  const confirmedByBack = {};
+  // Count totals per back from static CHECKLIST
   const totalByBack = {};
+  BACKS.forEach(b => { totalByBack[b] = 0; });
+  CHECKLIST.forEach(entry => { if (entry.b in totalByBack) totalByBack[entry.b]++; });
 
-  BACKS.forEach(b => { confirmedByBack[b] = 0; totalByBack[b] = 0; });
+  // Query Supabase for confirmed submission counts grouped by back name
+  const confirmedByBack = {};
+  BACKS.forEach(b => { confirmedByBack[b] = 0; });
 
-  CHECKLIST.forEach(entry => {
-    const b = entry.b;
-    if (!(b in totalByBack)) return;
-    totalByBack[b]++;
-    if (getStatus(entry) === 'Confirmed') confirmedByBack[b]++;
-  });
+  try {
+    const { data, error } = await db
+      .from('submissions')
+      .select('combinations(backs(name))')
+      .eq('status', 'confirmed');
+
+    if (error) throw error;
+    if (data) {
+      data.forEach(row => {
+        const backName = row.combinations?.backs?.name;
+        if (backName && backName in confirmedByBack) confirmedByBack[backName]++;
+      });
+    }
+  } catch (err) {
+    console.error('initProgress query error:', err);
+  }
 
   // Build table
   const table = document.createElement('table');
