@@ -6968,7 +6968,7 @@ const PROGRESS_COLORS = {
   'Old Mill Southern League': '#9D9AA1',   // grey
   'Old Mill':                 '#969696',   // grey
   'Polar Bear':               '#1133AA',   // dark blue (darker than Piedmont)
-  'Tolstoi':                  '#FFFFCB',   // light yellow
+  'Tolstoi':                  '#C8B400',   // darkened yellow — visible on cream
   'Uzit':                     '#9A99FF',   // medium purple
   'Carolina Brights':         '#FF99CB',   // pink
   'El Principe De Gales':     '#FE8081',   // salmon
@@ -7107,6 +7107,27 @@ async function initProgress() {
       tbody.appendChild(row);
     });
   });
+
+  // Grand total row
+  const grandConfirmed = BACKS.reduce((sum, b) => sum + (confirmedByBack[b] || 0), 0);
+  const grandTotal     = BACKS.reduce((sum, b) => sum + (totalByBack[b]     || 0), 0);
+  const grandPct       = grandTotal > 0 ? Math.round(grandConfirmed / grandTotal * 100) : 0;
+  const grandBarWidth  = grandTotal > 0 ? (grandConfirmed / grandTotal * 100).toFixed(1) : 0;
+
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'progress-group-header';
+  totalRow.style.borderTop = '2px solid var(--rule)';
+  totalRow.innerHTML = `
+    <td style="padding:0.6rem 0.75rem;font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:700;color:var(--ink);">Total</td>
+    <td style="padding:0.6rem 0.75rem;">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" style="width:${grandBarWidth}%;background:var(--sepia);"></div>
+      </div>
+    </td>
+    <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${grandConfirmed.toLocaleString()} / ${grandTotal.toLocaleString()}</td>
+    <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--text-primary);white-space:nowrap;">${grandPct}%</td>
+  `;
+  tbody.appendChild(totalRow);
 
   wrap.innerHTML = '';
   wrap.appendChild(table);
