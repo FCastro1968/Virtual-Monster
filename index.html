@@ -7222,23 +7222,13 @@ async function initLeagueProgress() {
   const wrap = document.getElementById('progress-league-wrap');
   if (!wrap) return;
 
-  // Build totals from static CHECKLIST (includes league + team on every entry)
-  const totalByTeam   = {};  // key: "League||Team"
-  const teamToLeague  = {};  // key: "League||Team" → league name
-  const leagueTeams   = {};  // key: league → Set of teams
+  // Query Supabase checklist view for all combinations with league, team, confirmed_count.
+  // We derive both totals AND confirmed counts from this single source — the static
+  // CHECKLIST array does not carry league/team, so we cannot use it here.
+  const totalByTeam     = {};  // key: "League||Team" -> count of combinations
+  const confirmedByTeam = {};  // key: "League||Team" -> sum of confirmed_count
+  const leagueTeams     = {};  // key: league -> Set of teams
 
-  CHECKLIST.forEach(entry => {
-    const league = entry.league || 'Unknown';
-    const team   = entry.team   || 'Unknown';
-    const key    = league + '||' + team;
-    totalByTeam[key]  = (totalByTeam[key] || 0) + 1;
-    teamToLeague[key] = league;
-    if (!leagueTeams[league]) leagueTeams[league] = new Set();
-    leagueTeams[league].add(team);
-  });
-
-  // Query Supabase for confirmed counts by league + team via checklist view
-  const confirmedByTeam = {};
   try {
     let all = [];
     let from = 0;
@@ -7258,11 +7248,15 @@ async function initLeagueProgress() {
       const league = row.league || 'Unknown';
       const team   = row.team   || 'Unknown';
       const key    = league + '||' + team;
-      // confirmed_count is per-combination; sum them for the team
-      confirmedByTeam[key] = (confirmedByTeam[key] || 0) + (row.confirmed_count > 0 ? 1 : 0);
+      totalByTeam[key]     = (totalByTeam[key]     || 0) + 1;
+      confirmedByTeam[key] = (confirmedByTeam[key] || 0) + (row.confirmed_count || 0);
+      if (!leagueTeams[league]) leagueTeams[league] = new Set();
+      leagueTeams[league].add(team);
     });
   } catch (err) {
     console.error('initLeagueProgress query error:', err);
+    wrap.innerHTML = '<p style=\"font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);\">Failed to load league data.</p>';
+    return;
   }
 
   // Build table
