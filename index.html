@@ -1412,7 +1412,7 @@
     display: flex;
     gap: 0;
     border-bottom: 2px solid var(--rule);
-    margin-bottom: 1.8rem;
+    margin-bottom: 1.2rem;
   }
   .progress-subtab {
     font-family: 'Courier Prime', monospace;
@@ -3699,9 +3699,6 @@
   <!-- ══ ARCHIVE PROGRESS SECTION ══ -->
   <div id="section-progress" class="progress-section">
     <div class="container" style="max-width:900px;">
-      <div class="section-rule" style="margin-bottom:1.5rem;">
-        <h2>Archive Progress</h2>
-      </div>
       <!-- Sub-tab bar -->
       <div class="progress-subtab-bar">
         <button class="progress-subtab active" onclick="switchProgressTab('series')">By Series &amp; Back</button>
@@ -3709,18 +3706,12 @@
       </div>
       <!-- Panel: Series & Back -->
       <div id="progress-panel-series" class="progress-subpanel active">
-        <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);letter-spacing:0.04em;margin-bottom:1.8rem;">
-          Confirmed cards as a share of the known superset, grouped by series and sorted alphabetically within each group.
-        </p>
         <div id="progress-table-wrap">
           <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
         </div>
       </div>
       <!-- Panel: League & Team -->
       <div id="progress-panel-league" class="progress-subpanel">
-        <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);letter-spacing:0.04em;margin-bottom:1.8rem;">
-          Confirmed cards as a share of the known superset, grouped by league then team.
-        </p>
         <div id="progress-league-wrap">
           <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
         </div>
