@@ -1308,7 +1308,7 @@
 
   /* ── ARCHIVE PROGRESS ── */
   .progress-section { display: none; }
-  .progress-section.active { display: block; padding: 2rem 0; }
+  .progress-section.active { display: block; }
 
   .progress-table {
     width: 100%;
@@ -2980,12 +2980,12 @@
       <p class="tagline">Superset archive &amp; collector's gallery — every known front/back combination documented, every finest confirmed example celebrated.</p>
       <nav>
         <button class="nav-btn active" onclick="showSection('checklist', this)">Superset Checklist</button>
-        <button class="nav-btn" onclick="showSection('recent', this)">Recent &amp; Attested</button>
+        <button class="nav-btn" onclick="showSection('progress', this)">Progress Summary</button>
         <button class="nav-btn" onclick="showSection('gallery', this)">Finest Known Gallery</button>
+        <button class="nav-btn" onclick="showSection('recent', this)">Recent &amp; Attested</button>
         <button class="nav-btn" onclick="showSection('contributors', this)">Top Contributors</button>
         <button class="nav-btn" onclick="showSection('forum', this)">Forum</button>
         <button class="nav-btn" onclick="showSection('submit', this)">Submit a Card</button>
-        <button class="nav-btn" onclick="showSection('progress', this)">Archive Progress</button>
         <button class="nav-btn" onclick="showSection('about', this)">About & Policies</button>
         <button class="nav-btn" id="admin-nav-btn" style="display:none;color:var(--rust);" onclick="showSection('admin', this)">Admin ⚑</button>
       </nav>
@@ -6954,30 +6954,36 @@ let _galleryFiltered  = [];  // after search/filter
 
 // Bill Brown color map keyed by brand root (matches any back whose name starts with the key)
 const PROGRESS_COLORS = {
-  'Piedmont':                 '#3366FF',
-  'Sovereign 350 Apple Green':'#97CB04',  // must come before 'Sovereign' catch-all
-  'Sovereign':                '#CCFFCC',
-  'Sweet Caporal':            '#FF6600',
-  'American Beauty 350 Frame':'#97CB04',
-  'American Beauty':          '#FE9900',
-  'Broadleaf':                '#FEFF99',
-  'Cycle':                    '#CCFFFF',
-  'Drum':                     '#3366FF',
-  'Brown Hindu':              '#FFCC00',
-  'Red Hindu':                '#FFCC00',
-  'Black Lenox':              '#CCCCFE',
-  'Brown Lenox':              '#CCCCFE',
-  'Old Mill Southern League': '#9D9AA1',
-  'Old Mill':                 '#969696',
-  'Polar Bear':               '#00FFFF',
-  'Tolstoi':                  '#FFFFCB',
-  'Uzit':                     '#9A99FF',
-  'Carolina Brights':         '#FF99CB',
-  'El Principe De Gales':     '#FE8081',
+  'Piedmont':                 '#3366FF',   // blue
+  'Sovereign':                '#97CB04',   // apple green (all Sovereign, including Apple Green)
+  'Sweet Caporal':            '#FF6600',   // orange
+  'American Beauty':          '#97CB04',   // yellow-green (same for all Am. Beauty)
+  'Broadleaf':                '#FEFF99',   // light yellow
+  'Cycle':                    '#FEFF99',   // pale yellow
+  'Drum':                     '#9966CC',   // purple
+  'Brown Hindu':              '#FFCC00',   // gold
+  'Red Hindu':                '#FFCC00',   // gold
+  'Black Lenox':              '#CCCCFE',   // lavender
+  'Brown Lenox':              '#CCCCFE',   // lavender
+  'Old Mill Southern League': '#9D9AA1',   // grey
+  'Old Mill':                 '#969696',   // grey
+  'Polar Bear':               '#1133AA',   // dark blue (darker than Piedmont)
+  'Tolstoi':                  '#FFFFCB',   // light yellow
+  'Uzit':                     '#9A99FF',   // medium purple
+  'Carolina Brights':         '#FF99CB',   // pink
+  'El Principe De Gales':     '#FE8081',   // salmon
 };
 
+// Returns true if a hex color is light enough to need a dark text override
+function _isLightColor(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  // Perceived luminance
+  return (r * 0.299 + g * 0.587 + b * 0.114) > 160;
+}
+
 function getProgressColor(backName) {
-  // Longest-match first (keys are iterated insertion order, specific entries first)
   for (const [key, color] of Object.entries(PROGRESS_COLORS)) {
     if (backName.startsWith(key)) return color;
   }
@@ -7086,11 +7092,8 @@ async function initProgress() {
       const pct       = total > 0 ? Math.round(confirmed / total * 100) : 0;
       const barWidth  = total > 0 ? (confirmed / total * 100).toFixed(1) : 0;
       const color     = getProgressColor(back);
-
-      // Darken the % text color slightly relative to bar color for readability
-      const pctColor  = color === '#CCFFCC' || color === '#FEFF99' || color === '#CCFFFF' || color === '#FFFFCB' || color === '#FFCC00' || color === '#9D9AA1' || color === '#CCCCFE'
-        ? 'var(--text-secondary)'
-        : color;
+      // % text color: use the bar color directly, but fall back to a dark tone for very light colors
+      const pctColor  = _isLightColor(color) ? 'var(--text-secondary)' : color;
 
       const row = document.createElement('tr');
       row.className = 'progress-row';
