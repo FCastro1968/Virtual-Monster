@@ -6991,8 +6991,12 @@ const PROGRESS_GROUPS = [
     backs: BACKS.filter(b => /\b150\b/.test(b)).sort(),
   },
   {
-    label: 'Series 350\u2013460',
-    backs: BACKS.filter(b => /\b350\b|\b460\b/.test(b)).sort(),
+    label: 'Series 350',
+    backs: BACKS.filter(b => /\b350\b/.test(b) && !/\b460\b/.test(b)).sort(),
+  },
+  {
+    label: 'Series 460 & 350\u2013460',
+    backs: BACKS.filter(b => /\b460\b/.test(b)).sort(),
   },
   {
     label: 'Assorted',
