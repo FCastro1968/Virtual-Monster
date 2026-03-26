@@ -1305,6 +1305,108 @@
   }
   .admin-section { display: none; }
   .admin-section.active { display: block; padding: 2rem 0; }  .admin-card { border: 1px solid var(--rule); background: var(--parchment); padding: 1.25rem; margin-bottom: 1rem; }
+
+  /* ── ARCHIVE PROGRESS ── */
+  .progress-section { display: none; }
+  .progress-section.active { display: block; padding: 2rem 0; }
+
+  .progress-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.78rem;
+  }
+
+  .progress-table th {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    text-align: left;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 2px solid var(--rule);
+    white-space: nowrap;
+  }
+
+  .progress-table th.align-right { text-align: right; }
+
+  .progress-group-header td {
+    background: var(--parchment);
+    border-top: 2px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.55rem 0.75rem;
+    font-family: 'Playfair Display', serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .progress-group-header .group-totals {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    float: right;
+    letter-spacing: 0.04em;
+  }
+
+  .progress-group-header .group-pct {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--rust);
+    float: right;
+    margin-left: 1.2rem;
+    letter-spacing: 0.04em;
+  }
+
+  .progress-row td {
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid rgba(139,105,20,0.12);
+    vertical-align: middle;
+    color: var(--ink);
+  }
+
+  .progress-row:hover td { background: rgba(196,163,90,0.07); }
+
+  .progress-back-name {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .progress-bar-cell { width: 220px; }
+
+  .progress-bar-track {
+    width: 100%;
+    height: 10px;
+    background: rgba(139,105,20,0.12);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .progress-confirmed {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+  }
+
+  .progress-pct {
+    text-align: right;
+    white-space: nowrap;
+    font-weight: 700;
+    font-size: 0.82rem;
+    min-width: 3.5rem;
+  }
   .admin-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
   .admin-player { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 0.95rem; color: var(--ink); }
   .admin-back { font-family: 'Courier Prime', monospace; font-size: 0.65rem; letter-spacing: 0.06em; color: var(--text-secondary); margin-top: 0.2rem; }
@@ -2883,6 +2985,7 @@
         <button class="nav-btn" onclick="showSection('contributors', this)">Top Contributors</button>
         <button class="nav-btn" onclick="showSection('forum', this)">Forum</button>
         <button class="nav-btn" onclick="showSection('submit', this)">Submit a Card</button>
+        <button class="nav-btn" onclick="showSection('progress', this)">Archive Progress</button>
         <button class="nav-btn" onclick="showSection('about', this)">About & Policies</button>
         <button class="nav-btn" id="admin-nav-btn" style="display:none;color:var(--rust);" onclick="showSection('admin', this)">Admin ⚑</button>
       </nav>
@@ -3539,6 +3642,21 @@
     <p>The checklist is, by its nature, never finished. New combinations surface every year. This archive does not claim to be the final word — it claims only to be the most rigorously documented word available at any given moment. If you hold a card that isn't in the checklist, that is reason to submit it, not reason to doubt it.</p>
   </div>
 
+  <!-- ══ ARCHIVE PROGRESS SECTION ══ -->
+  <div id="section-progress" class="progress-section">
+    <div class="container" style="max-width:900px;">
+      <div class="section-rule" style="margin-bottom:1.5rem;">
+        <h2>Archive Progress</h2>
+      </div>
+      <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);letter-spacing:0.04em;margin-bottom:1.8rem;">
+        Confirmed cards as a share of the known superset, grouped by series and sorted alphabetically within each group.
+      </p>
+      <div id="progress-table-wrap">
+        <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ ADMIN SECTION ══ -->
   <!-- ── FINEST KNOWN GALLERY ── -->
   <div id="section-gallery" class="gallery-section">
@@ -4106,7 +4224,7 @@ function getStatus(c) {
 
 function showSection(name, btn) {
   // Hide all sections
-  document.querySelectorAll('.checklist-section, .submit-section, .about-section, .recent-section, .contributors-section, .forum-section, .gallery-section, .admin-section').forEach(el => {
+  document.querySelectorAll('.checklist-section, .submit-section, .about-section, .recent-section, .contributors-section, .forum-section, .gallery-section, .admin-section, .progress-section').forEach(el => {
     el.classList.remove('active');
     if (el.classList.contains('checklist-section')) el.classList.add('hidden');
   });
@@ -4122,6 +4240,7 @@ function showSection(name, btn) {
   // Load admin queues when admin section opens
   if (name === 'admin') loadAdminQueues();
   if (name === 'gallery') initGallery();
+  if (name === 'progress') initProgress();
 }
 
 // ── ADMIN ────────────────────────────────────────────────────────────────────
@@ -6831,6 +6950,153 @@ document.getElementById('post-list').addEventListener('click', e => {
 const GALLERY_PAGE_SIZE = 48;
 let _galleryAllData   = [];  // full fetched + filtered dataset
 let _galleryFiltered  = [];  // after search/filter
+// ── ARCHIVE PROGRESS ─────────────────────────────────────────────────────────
+
+// Bill Brown color map keyed by brand root (matches any back whose name starts with the key)
+const PROGRESS_COLORS = {
+  'Piedmont':                 '#3366FF',
+  'Sovereign 350 Apple Green':'#97CB04',  // must come before 'Sovereign' catch-all
+  'Sovereign':                '#CCFFCC',
+  'Sweet Caporal':            '#FF6600',
+  'American Beauty 350 Frame':'#97CB04',
+  'American Beauty':          '#FE9900',
+  'Broadleaf':                '#FEFF99',
+  'Cycle':                    '#CCFFFF',
+  'Drum':                     '#3366FF',
+  'Brown Hindu':              '#FFCC00',
+  'Red Hindu':                '#FFCC00',
+  'Black Lenox':              '#CCCCFE',
+  'Brown Lenox':              '#CCCCFE',
+  'Old Mill Southern League': '#9D9AA1',
+  'Old Mill':                 '#969696',
+  'Polar Bear':               '#00FFFF',
+  'Tolstoi':                  '#FFFFCB',
+  'Uzit':                     '#9A99FF',
+  'Carolina Brights':         '#FF99CB',
+  'El Principe De Gales':     '#FE8081',
+};
+
+function getProgressColor(backName) {
+  // Longest-match first (keys are iterated insertion order, specific entries first)
+  for (const [key, color] of Object.entries(PROGRESS_COLORS)) {
+    if (backName.startsWith(key)) return color;
+  }
+  return '#CCCCCC';
+}
+
+// Group definitions — order matters for display
+const PROGRESS_GROUPS = [
+  {
+    label: 'Series 150',
+    backs: BACKS.filter(b => /\b150\b/.test(b)).sort(),
+  },
+  {
+    label: 'Series 350\u2013460',
+    backs: BACKS.filter(b => /\b350\b|\b460\b/.test(b)).sort(),
+  },
+  {
+    label: 'Assorted',
+    backs: BACKS.filter(b => !/\b150\b|\b350\b|\b460\b/.test(b)).sort(),
+  },
+];
+
+let _progressInitDone = false;
+
+async function initProgress() {
+  if (_progressInitDone) return;
+  _progressInitDone = true;
+
+  const wrap = document.getElementById('progress-table-wrap');
+
+  // Count confirmed cards per back from CHECKLIST
+  // CHECKLIST entries have .b (back) and status is derived via getStatus()
+  const confirmedByBack = {};
+  const totalByBack = {};
+
+  BACKS.forEach(b => { confirmedByBack[b] = 0; totalByBack[b] = 0; });
+
+  CHECKLIST.forEach(entry => {
+    const b = entry.b;
+    if (!(b in totalByBack)) return;
+    totalByBack[b]++;
+    if (getStatus(entry) === 'Confirmed') confirmedByBack[b]++;
+  });
+
+  // Build table
+  const table = document.createElement('table');
+  table.className = 'progress-table';
+
+  // Header
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Back</th>
+        <th>Confirmed %</th>
+        <th class="align-right">Confirmed</th>
+        <th class="align-right">%</th>
+      </tr>
+    </thead>
+    <tbody id="progress-tbody"></tbody>
+  `;
+
+  const tbody = table.querySelector('#progress-tbody');
+
+  PROGRESS_GROUPS.forEach(group => {
+    let groupConfirmed = 0;
+    let groupTotal = 0;
+    group.backs.forEach(b => {
+      groupConfirmed += confirmedByBack[b] || 0;
+      groupTotal     += totalByBack[b]     || 0;
+    });
+    const groupPct = groupTotal > 0 ? Math.round(groupConfirmed / groupTotal * 100) : 0;
+
+    // Group header row
+    const hdr = document.createElement('tr');
+    hdr.className = 'progress-group-header';
+    hdr.innerHTML = `
+      <td colspan="4">
+        ${group.label}
+        <span class="group-pct">${groupPct}%</span>
+        <span class="group-totals">${groupConfirmed.toLocaleString()} / ${groupTotal.toLocaleString()}</span>
+      </td>
+    `;
+    tbody.appendChild(hdr);
+
+    // Back rows
+    group.backs.forEach(back => {
+      const confirmed = confirmedByBack[back] || 0;
+      const total     = totalByBack[back]     || 0;
+      const pct       = total > 0 ? Math.round(confirmed / total * 100) : 0;
+      const barWidth  = total > 0 ? (confirmed / total * 100).toFixed(1) : 0;
+      const color     = getProgressColor(back);
+
+      // Darken the % text color slightly relative to bar color for readability
+      const pctColor  = color === '#CCFFCC' || color === '#FEFF99' || color === '#CCFFFF' || color === '#FFFFCB' || color === '#FFCC00' || color === '#9D9AA1' || color === '#CCCCFE'
+        ? 'var(--text-secondary)'
+        : color;
+
+      const row = document.createElement('tr');
+      row.className = 'progress-row';
+      row.innerHTML = `
+        <td class="progress-back-name">${back}</td>
+        <td class="progress-bar-cell">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width:${barWidth}%;background:${color};"></div>
+          </div>
+        </td>
+        <td class="progress-confirmed">${confirmed.toLocaleString()} / ${total.toLocaleString()}</td>
+        <td class="progress-pct" style="color:${pctColor};">${pct}%</td>
+      `;
+      tbody.appendChild(row);
+    });
+  });
+
+  wrap.innerHTML = '';
+  wrap.appendChild(table);
+}
+
+// ── GALLERY ───────────────────────────────────────────────────────────────────
+
 let _galleryShowing   = 0;   // how many cards currently rendered
 let _galleryInitDone  = false;
 
