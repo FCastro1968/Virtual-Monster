@@ -3161,14 +3161,14 @@
           <label class="filter-label">League</label>
           <select id="league-filter" class="filter-select" onchange="onLeagueFilter()">
             <option value="">All Leagues</option>
-            <option value="NL">National League (204)</option>
-            <option value="AL">American League (186)</option>
-            <option value="EL">Eastern League (47)</option>
-            <option value="AA">American Association (39)</option>
-            <option value="SA">Southern Association (20)</option>
-            <option value="VSL">Virginia State League (12)</option>
-            <option value="SAL">South Atlantic League (10)</option>
-            <option value="TXL">Texas League (6)</option>
+            <option value="National League">National League (204)</option>
+            <option value="American League">American League (186)</option>
+            <option value="Eastern League">Eastern League (47)</option>
+            <option value="American Association">American Association (39)</option>
+            <option value="Southern Association">Southern Association (20)</option>
+            <option value="Virginia State League">Virginia State League (12)</option>
+            <option value="South Atlantic League">South Atlantic League (10)</option>
+            <option value="Texas League">Texas League (6)</option>
           </select>
         </div>
 
@@ -3898,7 +3898,7 @@ async function loadChecklistFromSupabase() {
     while (true) {
       const { data, error } = await db
         .from('checklist')
-        .select('player, back, is_hof, series, status, confirmed_count, attested_count, finest_grade, finest_grader, finest_cert, finest_collector')
+        .select('player, back, is_hof, series, league, team, status, confirmed_count, attested_count, finest_grade, finest_grader, finest_cert, finest_collector')
         .range(from, from + pageSize - 1);
       if (error) {
         console.error('Supabase query error:', JSON.stringify(error), error.message, error.code, error.hint);
@@ -3923,6 +3923,8 @@ async function loadChecklistFromSupabase() {
       b:         row.back,
       h:         row.is_hof ? 1 : 0,
       s:         row.series || 'Assorted',
+      league:    row.league || '',
+      team:      row.team   || '',
       status:    row.status || 'Reported',
       grade:          row.finest_grade     || null,
       grader:         row.finest_grader    || null,
@@ -5163,8 +5165,8 @@ function buildCardObjects(data){
     return {
       player: c.p, back: c.b, hof: c.h===1,
       series: c.s,
-      team: TEAM_MAP[c.p] || '',
-      league: LEAGUE_MAP[c.p] || '',
+      team: c.team || TEAM_MAP[c.p] || '',
+      league: c.league || LEAGUE_MAP[c.p] || '',
       status,
       grade:     topSub ? topSub.g  : (c.grade     || null),
       grader:    topSub ? topSub.gr : (c.grader    || null),
@@ -5822,29 +5824,23 @@ function filterTable() {
     const status      = getStatus(c);
     const statusMatch = !statusSel    || status === statusSel;
     const seriesMatch = !seriesSel    || c.s === seriesSel;
-    const leagueMatch = !leagueSel    || LEAGUE_MAP[c.p] === leagueSel;
-    const teamMatch   = !teamSel      || TEAM_MAP[c.p]   === teamSel;
+    const leagueMatch = !leagueSel    || (c.league || LEAGUE_MAP[c.p]) === leagueSel;
+    const teamMatch   = !teamSel      || (c.team   || TEAM_MAP[c.p])   === teamSel;
     return nameMatch && brandMatch && tagMatch && hofMatch && statusMatch && seriesMatch && leagueMatch && teamMatch;
   });
   renderTable(filtered);
 }
 
-function populateTeamDropdown(leagueAbbrev) {
+function populateTeamDropdown(leagueFilter) {
   const sel = document.getElementById('team-filter');
   if (!sel) return;
-  const abbrevToFull = {
-    NL:'National League', AL:'American League', EL:'Eastern League',
-    AA:'American Association', SA:'Southern Association',
-    SAL:'South Atlantic League', VSL:'Virginia State League', TXL:'Texas League'
-  };
-  const leagueFull = abbrevToFull[leagueAbbrev] || '';
-  // Collect teams relevant to the selected league (or all teams)
   const teamSet = new Set();
   const cl = LIVE_CHECKLIST.length ? LIVE_CHECKLIST : CHECKLIST;
   cl.forEach(c => {
-    if (!leagueAbbrev || LEAGUE_MAP[c.p] === leagueAbbrev) {
-      const t = TEAM_MAP[c.p];
-      if (t) teamSet.add(t);
+    const lg = c.league || LEAGUE_MAP[c.p] || '';
+    const tm = c.team   || TEAM_MAP[c.p]   || '';
+    if (!leagueFilter || lg === leagueFilter) {
+      if (tm) teamSet.add(tm);
     }
   });
   const teams = Array.from(teamSet).sort();
