@@ -7133,6 +7133,8 @@ async function initProgress() {
   // Query checklist view for totals and confirmed combinations grouped by back
   const totalByBack     = {};
   const confirmedByBack = {};
+  const gradeSum        = {};
+  const gradeCount      = {};
   BACKS.forEach(b => { totalByBack[b] = 0; confirmedByBack[b] = 0; });
 
   try {
@@ -7142,7 +7144,7 @@ async function initProgress() {
     while (true) {
       const { data, error } = await db
         .from('checklist')
-        .select('back, status')
+        .select('back, status, finest_grade')
         .range(from, from + pageSize - 1);
       if (error) throw error;
       if (!data || data.length === 0) break;
@@ -7155,6 +7157,10 @@ async function initProgress() {
       if (!(b in totalByBack)) return;
       totalByBack[b]++;
       if (row.status === 'Confirmed') confirmedByBack[b]++;
+      if (row.finest_grade != null) {
+        gradeSum[b]   = (gradeSum[b]   || 0) + row.finest_grade;
+        gradeCount[b] = (gradeCount[b] || 0) + 1;
+      }
     });
   } catch (err) {
     console.error('initProgress query error:', err);
@@ -7172,6 +7178,7 @@ async function initProgress() {
         <th>Confirmed %</th>
         <th class="align-right">Confirmed</th>
         <th class="align-right">%</th>
+        <th class="align-right">Avg grade</th>
       </tr>
     </thead>
     <tbody id="progress-tbody"></tbody>
@@ -7190,11 +7197,16 @@ async function initProgress() {
 
     // Group header row — use same 4-column structure as data rows for alignment
     const hdr = document.createElement('tr');
+    let groupGradeSum = 0, groupGradeCount = 0;
+    group.backs.forEach(b => { groupGradeSum += gradeSum[b] || 0; groupGradeCount += gradeCount[b] || 0; });
+    const groupAvg = groupGradeCount > 0 ? (groupGradeSum / groupGradeCount).toFixed(2) : '—';
+
     hdr.className = 'progress-group-header';
     hdr.innerHTML = `
       <td colspan="2" style="padding:0.55rem 0.75rem;font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:700;color:var(--ink);">${group.label}</td>
       <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${groupConfirmed.toLocaleString()} / ${groupTotal.toLocaleString()}</td>
       <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--rust);white-space:nowrap;">${groupPct}%</td>
+      <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.72rem;font-weight:700;color:var(--sepia);white-space:nowrap;">${groupAvg}</td>
     `;
     tbody.appendChild(hdr);
 
@@ -7207,6 +7219,8 @@ async function initProgress() {
       const color     = getProgressColor(back);
       const pctColor  = 'var(--text-primary)';
 
+      const avgGrade = gradeCount[back] > 0 ? (gradeSum[back] / gradeCount[back]).toFixed(2) : '—';
+
       const row = document.createElement('tr');
       row.className = 'progress-row';
       row.innerHTML = `
@@ -7218,16 +7232,20 @@ async function initProgress() {
         </td>
         <td class="progress-confirmed">${confirmed.toLocaleString()} / ${total.toLocaleString()}</td>
         <td class="progress-pct" style="color:${pctColor};">${pct}%</td>
+        <td class="progress-pct" style="color:var(--sepia);">${avgGrade}</td>
       `;
       tbody.appendChild(row);
     });
   });
 
   // Grand total row
-  const grandConfirmed = BACKS.reduce((sum, b) => sum + (confirmedByBack[b] || 0), 0);
-  const grandTotal     = BACKS.reduce((sum, b) => sum + (totalByBack[b]     || 0), 0);
-  const grandPct       = grandTotal > 0 ? Math.round(grandConfirmed / grandTotal * 100) : 0;
-  const grandBarWidth  = grandTotal > 0 ? (grandConfirmed / grandTotal * 100).toFixed(1) : 0;
+  const grandConfirmed  = BACKS.reduce((sum, b) => sum + (confirmedByBack[b] || 0), 0);
+  const grandTotal      = BACKS.reduce((sum, b) => sum + (totalByBack[b]     || 0), 0);
+  const grandPct        = grandTotal > 0 ? Math.round(grandConfirmed / grandTotal * 100) : 0;
+  const grandBarWidth   = grandTotal > 0 ? (grandConfirmed / grandTotal * 100).toFixed(1) : 0;
+  const grandGradeSum   = BACKS.reduce((sum, b) => sum + (gradeSum[b]   || 0), 0);
+  const grandGradeCount = BACKS.reduce((sum, b) => sum + (gradeCount[b] || 0), 0);
+  const grandAvg        = grandGradeCount > 0 ? (grandGradeSum / grandGradeCount).toFixed(2) : '—';
 
   const totalRow = document.createElement('tr');
   totalRow.className = 'progress-group-header';
@@ -7241,6 +7259,7 @@ async function initProgress() {
     </td>
     <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${grandConfirmed.toLocaleString()} / ${grandTotal.toLocaleString()}</td>
     <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--text-primary);white-space:nowrap;">${grandPct}%</td>
+    <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--sepia);white-space:nowrap;">${grandAvg}</td>
   `;
   tbody.appendChild(totalRow);
 
@@ -7270,6 +7289,8 @@ async function initLeagueProgress() {
   // CHECKLIST array does not carry league/team, so we cannot use it here.
   const totalByTeam     = {};  // key: "League||Team" -> count of combinations
   const confirmedByTeam = {};  // key: "League||Team" -> sum of confirmed_count
+  const gradeSumTeam    = {};  // key: "League||Team" -> sum of finest_grade
+  const gradeCountTeam  = {};  // key: "League||Team" -> count of graded combos
   const leagueTeams     = {};  // key: league -> Set of teams
 
   try {
@@ -7279,7 +7300,7 @@ async function initLeagueProgress() {
     while (true) {
       const { data, error } = await db
         .from('checklist')
-        .select('league, team, status')
+        .select('league, team, status, finest_grade')
         .range(from, from + pageSize - 1);
       if (error) throw error;
       if (!data || data.length === 0) break;
@@ -7293,6 +7314,10 @@ async function initLeagueProgress() {
       const key    = league + '||' + team;
       totalByTeam[key]     = (totalByTeam[key]     || 0) + 1;
       if (row.status === 'Confirmed') confirmedByTeam[key] = (confirmedByTeam[key] || 0) + 1;
+      if (row.finest_grade != null) {
+        gradeSumTeam[key]   = (gradeSumTeam[key]   || 0) + row.finest_grade;
+        gradeCountTeam[key] = (gradeCountTeam[key] || 0) + 1;
+      }
       if (!leagueTeams[league]) leagueTeams[league] = new Set();
       leagueTeams[league].add(team);
     });
@@ -7312,6 +7337,7 @@ async function initLeagueProgress() {
         <th>Confirmed %</th>
         <th class="align-right">Confirmed</th>
         <th class="align-right">%</th>
+        <th class="align-right">Avg grade</th>
       </tr>
     </thead>
     <tbody id="progress-league-tbody"></tbody>
@@ -7330,17 +7356,22 @@ async function initLeagueProgress() {
   orderedLeagues.forEach(league => {
     const teams = Array.from(leagueTeams[league]).sort();
 
-    let leagueConfirmed = 0;
-    let leagueTotal     = 0;
+    let leagueConfirmed  = 0;
+    let leagueTotal      = 0;
+    let leagueGradeSum   = 0;
+    let leagueGradeCount = 0;
     teams.forEach(team => {
       const key = league + '||' + team;
-      leagueConfirmed += confirmedByTeam[key] || 0;
-      leagueTotal     += totalByTeam[key]     || 0;
+      leagueConfirmed  += confirmedByTeam[key]  || 0;
+      leagueTotal      += totalByTeam[key]      || 0;
+      leagueGradeSum   += gradeSumTeam[key]     || 0;
+      leagueGradeCount += gradeCountTeam[key]   || 0;
     });
     grandConfirmed += leagueConfirmed;
     grandTotal     += leagueTotal;
 
     const leaguePct = leagueTotal > 0 ? Math.round(leagueConfirmed / leagueTotal * 100) : 0;
+    const leagueAvg = leagueGradeCount > 0 ? (leagueGradeSum / leagueGradeCount).toFixed(2) : '—';
 
     // League header row
     const hdr = document.createElement('tr');
@@ -7349,6 +7380,7 @@ async function initLeagueProgress() {
       <td colspan="2" style="padding:0.55rem 0.75rem;font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:700;color:var(--ink);">${league}</td>
       <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${leagueConfirmed.toLocaleString()} / ${leagueTotal.toLocaleString()}</td>
       <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--rust);white-space:nowrap;">${leaguePct}%</td>
+      <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.72rem;font-weight:700;color:var(--sepia);white-space:nowrap;">${leagueAvg}</td>
     `;
     tbody.appendChild(hdr);
 
@@ -7359,6 +7391,8 @@ async function initLeagueProgress() {
       const total     = totalByTeam[key]     || 0;
       const pct       = total > 0 ? Math.round(confirmed / total * 100) : 0;
       const barWidth  = total > 0 ? (confirmed / total * 100).toFixed(1) : 0;
+
+      const teamAvg = gradeCountTeam[key] > 0 ? (gradeSumTeam[key] / gradeCountTeam[key]).toFixed(2) : '—';
 
       const row = document.createElement('tr');
       row.className = 'progress-row';
@@ -7371,14 +7405,18 @@ async function initLeagueProgress() {
         </td>
         <td class="progress-confirmed">${confirmed.toLocaleString()} / ${total.toLocaleString()}</td>
         <td class="progress-pct">${pct}%</td>
+        <td class="progress-pct" style="color:var(--sepia);">${teamAvg}</td>
       `;
       tbody.appendChild(row);
     });
   });
 
   // Grand total row
-  const grandPct      = grandTotal > 0 ? Math.round(grandConfirmed / grandTotal * 100) : 0;
-  const grandBarWidth = grandTotal > 0 ? (grandConfirmed / grandTotal * 100).toFixed(1) : 0;
+  const grandPct        = grandTotal > 0 ? Math.round(grandConfirmed / grandTotal * 100) : 0;
+  const grandBarWidth   = grandTotal > 0 ? (grandConfirmed / grandTotal * 100).toFixed(1) : 0;
+  const grandGradeSumL  = orderedLeagues.reduce((s, l) => s + (Array.from(leagueTeams[l]||[]).reduce((a, t) => a + (gradeSumTeam[l+'||'+t]||0), 0)), 0);
+  const grandGradeCountL= orderedLeagues.reduce((s, l) => s + (Array.from(leagueTeams[l]||[]).reduce((a, t) => a + (gradeCountTeam[l+'||'+t]||0), 0)), 0);
+  const grandAvgL       = grandGradeCountL > 0 ? (grandGradeSumL / grandGradeCountL).toFixed(2) : '—';
 
   const totalRow = document.createElement('tr');
   totalRow.className = 'progress-group-header';
@@ -7392,6 +7430,7 @@ async function initLeagueProgress() {
     </td>
     <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${grandConfirmed.toLocaleString()} / ${grandTotal.toLocaleString()}</td>
     <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--text-primary);white-space:nowrap;">${grandPct}%</td>
+    <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--sepia);white-space:nowrap;">${grandAvgL}</td>
   `;
   tbody.appendChild(totalRow);
 
