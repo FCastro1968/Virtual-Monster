@@ -7534,18 +7534,32 @@ async function submitCardAsGuest() {
       raw_notes:        notes || null,
     };
 
-    const { data: submission, error: subErr } = await db
-      .from('submissions')
-      .insert(submissionPayload)
-      .select('id')
-      .single();
+    const { data: submissionId, error: subErr } = await db
+      .rpc('insert_guest_submission', {
+        p_combination_id: combo.id,
+        p_guest_handle:   handle,
+        p_is_graded:      !isRaw,
+        p_grader:         isRaw ? null : (verifiedData?.company || null),
+        p_cert_number:    isRaw ? null : (verifiedData?.cert || null),
+        p_grade:          grade || null,
+        p_grade_numeric:  (() => {
+          if (verifiedData?.gradeNumeric != null) return verifiedData.gradeNumeric;
+          const g = grade || verifiedData?.grade;
+          if (!g) return null;
+          const n = gradeToNum(g);
+          return n >= 0 ? n : null;
+        })(),
+        p_status:        'guest_pending',
+        p_cert_data:     verifiedData ? JSON.stringify(verifiedData) : null,
+        p_raw_notes:     notes || null,
+      });
 
     if (subErr) {
       if (subErr.code === '23505') throw new Error('This cert number has already been submitted.');
       throw subErr;
     }
 
-    // Step 4: Upload scans to guest/ prefixed path in storage
+    const submission = { id: submissionId };
     const ts     = Date.now();
     const rnd    = Math.random().toString(36).slice(2, 8);
     const prefix = `guest/${ts}-${rnd}`;
