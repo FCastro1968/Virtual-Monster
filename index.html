@@ -7157,8 +7157,9 @@ async function initProgress() {
       if (!(b in totalByBack)) return;
       totalByBack[b]++;
       if (row.status === 'Confirmed') confirmedByBack[b]++;
-      if (row.finest_grade != null) {
-        gradeSum[b]   = (gradeSum[b]   || 0) + row.finest_grade;
+      const fg = parseFloat(row.finest_grade);
+      if (!isNaN(fg)) {
+        gradeSum[b]   = (gradeSum[b]   || 0) + fg;
         gradeCount[b] = (gradeCount[b] || 0) + 1;
       }
     });
@@ -7314,8 +7315,9 @@ async function initLeagueProgress() {
       const key    = league + '||' + team;
       totalByTeam[key]     = (totalByTeam[key]     || 0) + 1;
       if (row.status === 'Confirmed') confirmedByTeam[key] = (confirmedByTeam[key] || 0) + 1;
-      if (row.finest_grade != null) {
-        gradeSumTeam[key]   = (gradeSumTeam[key]   || 0) + row.finest_grade;
+      const fg2 = parseFloat(row.finest_grade);
+      if (!isNaN(fg2)) {
+        gradeSumTeam[key]   = (gradeSumTeam[key]   || 0) + fg2;
         gradeCountTeam[key] = (gradeCountTeam[key] || 0) + 1;
       }
       if (!leagueTeams[league]) leagueTeams[league] = new Set();
