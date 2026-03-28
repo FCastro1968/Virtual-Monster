@@ -8070,14 +8070,39 @@ async function initRawGallery() {
   try {
     const SUPABASE_URL = 'https://visrbvpidnhbvpjsoxtf.supabase.co';
 
-    // Fetch all raw (ungraded) confirmed/attested submissions that are the
-    // vote-leader for their combination.  We pull is_finest_raw = true,
-    // falling back to ordering by vote count and taking the top row per combo
-    // if that column doesn't exist yet (handled client-side).
+    // Step 1: fetch all raw_votes to find the vote-leader submission per combination.
+    // raw_votes schema: (user_id, combination_id, submission_id) — one vote per user per combo.
+    // The winner is the submission_id with the most nominations for its combination.
+    const { data: votes, error: voteErr } = await db
+      .from('raw_votes')
+      .select('combination_id, submission_id');
+
+    if (voteErr) throw voteErr;
+
+    // Tally votes: comboId -> { submissionId -> count }
+    const tally = new Map();  // Map<combination_id, Map<submission_id, count>>
+    for (const v of (votes || [])) {
+      if (!tally.has(v.combination_id)) tally.set(v.combination_id, new Map());
+      const subMap = tally.get(v.combination_id);
+      subMap.set(v.submission_id, (subMap.get(v.submission_id) ?? 0) + 1);
+    }
+
+    // Pick the vote-leader submission_id per combination, and its vote count
+    const winnerMap = new Map();  // Map<combination_id, { submission_id, votes }>
+    for (const [comboId, subMap] of tally) {
+      let bestId = null, bestCount = 0;
+      for (const [subId, count] of subMap) {
+        if (count > bestCount) { bestCount = count; bestId = subId; }
+      }
+      winnerMap.set(comboId, { submission_id: bestId, votes: bestCount });
+    }
+
+    // Step 2: fetch ALL raw submissions (no grade, no cert) with detail.
+    // We need them all so that combos with zero votes can fall back to earliest submitted.
     const { data, error } = await db
       .from('submissions')
       .select(`
-        id, combination_id, vote_count,
+        id, combination_id, submitted_at,
         combinations (
           players ( name, is_hof ),
           backs    ( name )
@@ -8088,16 +8113,29 @@ async function initRawGallery() {
       .is('grade', null)
       .is('cert_number', null)
       .in('status', ['confirmed', 'attested'])
-      .order('vote_count', { ascending: false, nullsLast: true });
+      .order('submitted_at', { ascending: true });  // earliest first for fallback
 
     if (error) throw error;
 
-    // Client-side dedup: keep only the vote-leader per combination
-    // (data is already sorted vote_count desc so first seen = winner)
+    // Build a lookup by submission id for vote-winner resolution
+    const subById = new Map((data || []).map(s => [s.id, s]));
+
+    // For each combination: if votes exist, use the vote-leader;
+    // otherwise use the earliest submitted raw submission (first in ordered data).
     const seen = new Map();
+
+    // First pass: seed every combo with its earliest submission (votes = 0)
     for (const s of (data || [])) {
       const comboId = s.combination_id ?? s.id;
-      if (!seen.has(comboId)) seen.set(comboId, s);
+      if (!seen.has(comboId)) {
+        seen.set(comboId, { ...s, _votes: 0 });
+      }
+    }
+
+    // Second pass: override with vote-winner where votes exist
+    for (const [comboId, winner] of winnerMap) {
+      const sub = subById.get(winner.submission_id);
+      if (sub) seen.set(comboId, { ...sub, _votes: winner.votes });
     }
 
 
@@ -8138,7 +8176,7 @@ async function initRawGallery() {
         player,
         back,
         isHof,
-        votes:     s.vote_count ?? 0,
+        votes:     s._votes ?? 0,
         submitter: s.users?.handle || null,
         imgUrl,
       };
