@@ -853,6 +853,184 @@
     color: var(--rust);
   }
 
+  /* ── RAW FINEST BLOCK ── */
+  /* Top-level container — hidden until raw subs exist */
+  #raw-finest-block { display: none; }
+  #raw-finest-block.has-raw { display: block; }
+
+  .raw-finest-leader {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .raw-finest-thumb {
+    width: 64px;
+    height: 80px;
+    flex-shrink: 0;
+    background: var(--parchment);
+    border: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .raw-finest-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: crosshair;
+  }
+  .raw-finest-thumb .no-scan-label {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    text-align: center;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.25rem;
+    line-height: 1.4;
+  }
+
+  .raw-finest-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .raw-finest-submitter {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.72rem;
+    color: var(--ink);
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .raw-finest-votes {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+  }
+  .raw-finest-votes strong {
+    color: var(--ink);
+  }
+  .raw-vote-btn {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--rule);
+    background: var(--parchment);
+    color: var(--text-secondary);
+    padding: 0.2rem 0.6rem;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .raw-vote-btn:hover:not(:disabled) {
+    background: var(--ink);
+    color: var(--cream);
+    border-color: var(--ink);
+  }
+  .raw-vote-btn.my-vote {
+    background: var(--forest);
+    color: var(--cream);
+    border-color: var(--forest);
+  }
+  .raw-vote-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .raw-view-all-link {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 0.35rem;
+    display: block;
+  }
+  .raw-view-all-link:hover { color: var(--rust); }
+
+  /* Expanded "all raw submissions" panel */
+  .raw-all-panel {
+    display: none;
+    margin-top: 0.65rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 0.65rem;
+  }
+  .raw-all-panel.open { display: block; }
+
+  .raw-sub-row {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    gap: 0.5rem 0.65rem;
+    align-items: center;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid rgba(139,105,20,0.1);
+  }
+  .raw-sub-row:last-child { border-bottom: none; }
+
+  .raw-sub-thumb {
+    width: 48px;
+    height: 60px;
+    background: var(--parchment);
+    border: 1px solid var(--rule);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .raw-sub-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: crosshair;
+  }
+  .raw-sub-thumb .no-scan-sm {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.5rem;
+    color: var(--text-muted);
+    text-align: center;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+  .raw-sub-body {
+    min-width: 0;
+  }
+  .raw-sub-handle {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .raw-sub-meta {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.58rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    margin-top: 0.15rem;
+  }
+  .raw-sub-meta .vote-tally {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
   .submit-cta {
     margin-top: 1.25rem;
     padding: 0.75rem 1rem;
@@ -3926,37 +4104,50 @@
     </div>
     <div class="detail-body">
       <div class="finest-panel">
-        <p class="finest-label">Finest Known — Graded</p>
-        <div class="card-placeholder">
-          <div class="card-placeholder-inner">
-            <div class="card-placeholder-name" id="detail-card-name">TY COBB</div>
-            <div class="card-placeholder-team" id="detail-card-team">DETROIT · A.L.</div>
-            <div class="card-placeholder-year">T206 · 1909–11</div>
-            <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
+        <div id="graded-finest-section">
+          <p class="finest-label">Finest Known — Graded</p>
+          <div class="card-placeholder">
+            <div class="card-placeholder-inner">
+              <div class="card-placeholder-name" id="detail-card-name">TY COBB</div>
+              <div class="card-placeholder-team" id="detail-card-team">DETROIT · A.L.</div>
+              <div class="card-placeholder-year">T206 · 1909–11</div>
+              <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
+            </div>
+            <button class="scan-arrow left"  id="scan-prev" onclick="stepScan(-1)" disabled>&#8249;</button>
+            <button class="scan-arrow right" id="scan-next" onclick="stepScan(1)"  disabled>&#8250;</button>
+            <div class="scan-counter hidden" id="scan-counter"></div>
           </div>
-          <button class="scan-arrow left"  id="scan-prev" onclick="stepScan(-1)" disabled>&#8249;</button>
-          <button class="scan-arrow right" id="scan-next" onclick="stepScan(1)"  disabled>&#8250;</button>
-          <div class="scan-counter hidden" id="scan-counter"></div>
-        </div>
-        <div class="finest-meta">
-          <div class="meta-item"><label>Grade</label><value id="detail-grade">—</value></div>
-          <div class="meta-item"><label>Grader</label><value id="detail-grader">—</value></div>
-          <div class="meta-item"><label>Cert #</label><value id="detail-cert">—</value></div>
-          <div class="meta-item"><label>Documented By</label><value id="detail-collector">—</value></div>
+          <div class="finest-meta">
+            <div class="meta-item"><label>Grade</label><value id="detail-grade">—</value></div>
+            <div class="meta-item"><label>Grader</label><value id="detail-grader">—</value></div>
+            <div class="meta-item"><label>Cert #</label><value id="detail-cert">—</value></div>
+            <div class="meta-item"><label>Documented By</label><value id="detail-collector">—</value></div>
+          </div>
         </div>
 
         <div id="raw-finest-block" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--rule);">
           <p class="finest-label" style="color:var(--text-secondary);">Finest Known — Raw</p>
-          <div style="background:var(--parchment);border:1px solid var(--rule);padding:0.75rem;font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);line-height:1.6;" id="raw-finest-meta">
-            No raw submissions yet for this combination.
+          <!-- Leader row: scan + submitter + vote button -->
+          <div class="raw-finest-leader" id="raw-finest-leader">
+            <div class="raw-finest-thumb" id="raw-finest-thumb">
+              <div class="no-scan-label">no scan</div>
+            </div>
+            <div class="raw-finest-info">
+              <div class="raw-finest-submitter" id="raw-finest-submitter">—</div>
+              <div class="raw-finest-votes" id="raw-finest-votes">— votes</div>
+              <button class="raw-vote-btn" id="raw-vote-leader-btn" onclick="castRawVote(null)" disabled title="Sign in to vote">Vote as Raw Finest</button>
+              <button class="raw-view-all-link" onclick="toggleRawAllPanel()">View all raw submissions ▾</button>
+            </div>
           </div>
+          <!-- Expanded list of all raw submissions -->
+          <div class="raw-all-panel" id="raw-all-panel"></div>
         </div>
       </div>
       <div class="submissions-panel">
         <p class="sub-title">All Submissions — <span id="detail-back-label">Piedmont 150</span></p>
         <div id="submissions-list"></div>
-        <div id="raw-submissions-section" style="margin-top:1rem;">
-          <p class="sub-title" style="color:var(--text-secondary);opacity:0.7;">Raw Submissions</p>
+        <div id="raw-submissions-section" style="display:none;">
+          <!-- raw-submissions-section kept in DOM for JS compatibility but content moved to raw-finest-block -->
           <div id="raw-submissions-list"></div>
         </div>
         <div class="submit-cta" onclick="closeDetailBtn(); showSection('submit', document.querySelectorAll('.nav-btn')[2])">
@@ -5133,12 +5324,27 @@ async function openDetail(c) {
   _initScanCarousel([], true);
   document.getElementById('detail-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+  // Collapse any expanded raw-all-panel from a prior open
+  const rawAllPanel = document.getElementById('raw-all-panel');
+  if (rawAllPanel) rawAllPanel.classList.remove('open');
   _renderDetailPanel(c);
   // Wire carousel magnifier (placeholder now visible in DOM)
   if (typeof wireCarouselMagnifier === 'function') wireCarouselMagnifier();
   // Load real submissions from Supabase, then re-render with fresh scans
   await loadSubmissionsForCombo(c.player, c.back);
+  // Load raw votes for this combo (combination_id required)
+  const comboId = _getComboId(c);
+  if (comboId) {
+    await loadRawVotesForCombo(comboId);
+  }
   _renderDetailPanel(c);
+}
+
+// ── combo_id helper — prefers c.combinationId from LIVE_CHECKLIST ────────────
+function _getComboId(c) {
+  if (c.combinationId) return c.combinationId;
+  const match = LIVE_CHECKLIST.find(x => x.p === c.player && x.b === c.back);
+  return match ? match.combinationId : null;
 }
 
 function _renderDetailPanel(c) {
@@ -5151,16 +5357,16 @@ function _renderDetailPanel(c) {
   document.getElementById('detail-collector').textContent = c.collector || '—';
   document.getElementById('detail-back-label').textContent = `${c.back} · Series ${c.series}`;
 
-  // Build scan carousel — collect all images from all submissions for this combo
-  const allSubsForScans = (SUBMISSIONS[c.player+'|'+c.back] || []);
-  const allScans = [];
-  allSubsForScans.forEach(s => {
-    if (s.imgs && s.imgs.length) s.imgs.forEach(url => allScans.push(url));
+  // Build scan carousel — graded-submission scans only (raw scans shown in raw block)
+  const allSubs = (SUBMISSIONS[c.player+'|'+c.back] || []);
+  const gradedScans = [];
+  allSubs.filter(s => !s.raw).forEach(s => {
+    if (s.imgs && s.imgs.length) s.imgs.forEach(url => gradedScans.push(url));
   });
-  _initScanCarousel(allScans);
+  _initScanCarousel(gradedScans);
 
-  // If we have a scan, make sure the placeholder-inner text is gone
-  if (allScans.length === 0) {
+  // No-scan placeholder text
+  if (gradedScans.length === 0) {
     const placeholder = document.querySelector('.card-placeholder');
     let inner = placeholder.querySelector('.card-placeholder-inner');
     if (!inner) {
@@ -5176,9 +5382,10 @@ function _renderDetailPanel(c) {
     }
   }
 
+  // ── Graded submissions list ────────────────────────────────────────────────
   const list = document.getElementById('submissions-list');
   list.innerHTML = '';
-  const realSubs = (SUBMISSIONS[c.player+'|'+c.back] || []).filter(s => !s.raw);
+  const realSubs = allSubs.filter(s => !s.raw);
   if (realSubs.length > 0) {
     realSubs.slice(0, 10).forEach((s, i) => {
       const hasScans = s.imgs && s.imgs.length > 0;
@@ -5220,48 +5427,319 @@ function _renderDetailPanel(c) {
       list.appendChild(more);
     }
   } else if (c.submissions > 0) {
-    // Real data is loading from Supabase — show a placeholder
     list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);padding:1rem 0;font-style:italic;">Loading submissions…</p>';
   } else {
     list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);padding:1rem 0;font-style:italic;">No submissions yet for this combination. Be the first to document it.</p>';
   }
 
-  const rawList = document.getElementById('raw-submissions-list');
-  const rawFinest = document.getElementById('raw-finest-meta');
-  const rawSubs = (SUBMISSIONS[c.player+'|'+c.back] || []).filter(s => s.raw);
-  if (rawSubs.length > 0) {
-    rawList.innerHTML = '';
-    rawSubs.forEach((s, i) => {
-      const hasScans = s.imgs && s.imgs.length > 0;
-      const row = document.createElement('div');
-      row.className = 'submission-row';
-      row.style.cssText = 'opacity:0.8;cursor:pointer;';
-      row.title = hasScans ? 'View scans on file' : 'No scans on file';
-      row.innerHTML = `
-        <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
-        <span class="sub-collector">${escapeHtml(s.cl || '')}</span>
-        <span class="sub-cert" style="font-style:italic;">ungraded · ${hasScans ? 'scans on file' : 'no scans'}</span>
-        <span class="sub-grade" style="color:var(--text-secondary);">Raw</span>
-        ${hasScans ? `<span style="font-family:'Courier Prime',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.15rem 0.45rem;border:1px solid var(--rule);color:var(--text-secondary);background:var(--parchment);white-space:nowrap;">⊕ Scans</span>` : ''}
-      `;
-      row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
-      row.addEventListener('mouseleave', () => row.style.background = '');
-      row.addEventListener('click', () => openSubmissionInModal(c.player, c.back, s, i === 0));
-      rawList.appendChild(row);
-    });
-    rawFinest.innerHTML = `Submitted by <strong>${escapeHtml(rawSubs[0].cl || '')}</strong> · Ungraded · ${rawSubs[0].imgs && rawSubs[0].imgs.length ? 'Scans on file' : 'No scans'}`;
-  } else {
-    rawList.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.65rem;color:var(--text-muted);padding:0.5rem 0;font-style:italic;">No raw submissions for this combination.</p>';
-    rawFinest.textContent = 'No raw submissions yet for this combination.';
-  }
-
-  document.getElementById('detail-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  // ── Raw finest block (left panel) ─────────────────────────────────────────
+  _renderRawFinestBlock(c);
 }
 
 function closeDetailBtn() {
   document.getElementById('detail-overlay').classList.remove('open');
   document.body.style.overflow = '';
+}
+
+// ── RAW FINEST BLOCK ─────────────────────────────────────────────────────────
+// Per-session cache: combination_id → { voteCounts: { submission_id → count },
+//                                        myVote: submission_id | null }
+const _rawVoteCache = {};
+// Current combination_id whose detail panel is open
+let _detailComboId = null;
+// Current raw submissions list (set during _renderRawFinestBlock)
+let _detailRawSubs = [];
+
+// Load vote tallies and the current user's vote for a combination from raw_votes.
+// raw_votes columns: user_id, combination_id, submission_id (upsert key: user_id + combination_id)
+async function loadRawVotesForCombo(comboId) {
+  if (!comboId) return;
+  try {
+    // Fetch all votes for this combination
+    const { data, error } = await db
+      .from('raw_votes')
+      .select('user_id, submission_id')
+      .eq('combination_id', comboId);
+    if (error) throw error;
+
+    // Tally votes per submission
+    const voteCounts = {};
+    (data || []).forEach(v => {
+      voteCounts[v.submission_id] = (voteCounts[v.submission_id] || 0) + 1;
+    });
+
+    // Find the current user's vote
+    let myVote = null;
+    if (currentUser) {
+      const mine = (data || []).find(v => v.user_id === currentUser.id);
+      myVote = mine ? mine.submission_id : null;
+    }
+
+    _rawVoteCache[comboId] = { voteCounts, myVote };
+  } catch (err) {
+    console.warn('loadRawVotesForCombo error:', err.message);
+    _rawVoteCache[comboId] = { voteCounts: {}, myVote: null };
+  }
+}
+
+// Sort raw submissions by vote-count desc, then earliest submitted_at (tiebreak)
+function _sortRawSubs(rawSubs, voteCounts) {
+  return [...rawSubs].sort((a, b) => {
+    const va = voteCounts[a._submissionId] || 0;
+    const vb = voteCounts[b._submissionId] || 0;
+    if (vb !== va) return vb - va;
+    // Tiebreak: earlier submission date wins
+    const da = a.dt ? new Date(a.dt) : new Date(0);
+    const db_ = b.dt ? new Date(b.dt) : new Date(0);
+    return da - db_;
+  });
+}
+
+// Build and show/hide the raw-finest-block; also populate the raw-all-panel
+function _renderRawFinestBlock(c) {
+  const block     = document.getElementById('raw-finest-block');
+  const thumbEl   = document.getElementById('raw-finest-thumb');
+  const subEl     = document.getElementById('raw-finest-submitter');
+  const votesEl   = document.getElementById('raw-finest-votes');
+  const voteBtn   = document.getElementById('raw-vote-leader-btn');
+  const allPanel  = document.getElementById('raw-all-panel');
+
+  const allSubs = SUBMISSIONS[c.player+'|'+c.back] || [];
+  const rawSubs = allSubs.filter(s => s.raw);
+  const gradedSubs = allSubs.filter(s => !s.raw);
+
+  _detailRawSubs = rawSubs;
+  _detailComboId = _getComboId(c);
+
+  // Show/hide the graded section depending on whether graded submissions exist.
+  // For pure-Attested combos (no graded subs), hide the graded finest section entirely.
+  const gradedSection = document.getElementById('graded-finest-section');
+  if (gradedSection) {
+    // Hide if: submissions have loaded (allSubs._loaded) and there are no graded subs
+    const loaded = !!(allSubs._loaded);
+    const hideGraded = loaded && gradedSubs.length === 0;
+    gradedSection.style.display = hideGraded ? 'none' : '';
+    // When graded section is hidden, raw block is first — drop its top border/spacing
+    block.style.borderTop  = hideGraded ? 'none' : '';
+    block.style.paddingTop = hideGraded ? '0' : '';
+    block.style.marginTop  = hideGraded ? '0' : '';
+  }
+
+  if (rawSubs.length === 0) {
+    // No raw subs — hide the block entirely
+    block.classList.remove('has-raw');
+    return;
+  }
+
+  block.classList.add('has-raw');
+
+  // Get cached vote data (may be empty on first render before async load)
+  const cache = _rawVoteCache[_detailComboId] || { voteCounts: {}, myVote: null };
+  const { voteCounts, myVote } = cache;
+
+  // Sort to find the vote leader
+  const sorted = _sortRawSubs(rawSubs, voteCounts);
+  const leader = sorted[0];
+  const leaderVotes = voteCounts[leader._submissionId] || 0;
+
+  // Thumbnail
+  const leaderImg = leader.imgs && leader.imgs.length ? leader.imgs[0] : null;
+  if (leaderImg) {
+    thumbEl.innerHTML = `<img src="${leaderImg}" alt="Raw finest scan" onerror="this.parentElement.innerHTML='<div class=\'no-scan-label\'>no scan</div>'">`;
+    const img = thumbEl.querySelector('img');
+    if (img && typeof attachMagnifier === 'function') attachMagnifier(img);
+  } else {
+    thumbEl.innerHTML = `<div class="no-scan-label">no scan<br>on file</div>`;
+  }
+
+  // Submitter + votes
+  subEl.textContent = leader.cl || 'unknown';
+  votesEl.innerHTML = leaderVotes === 0
+    ? '<span>No votes yet</span>'
+    : `<strong>${leaderVotes}</strong> vote${leaderVotes !== 1 ? 's' : ''}`;
+
+  // Vote button state
+  const isMyVote = myVote === leader._submissionId;
+  if (!currentUser) {
+    voteBtn.disabled = true;
+    voteBtn.title    = 'Sign in to vote';
+    voteBtn.classList.remove('my-vote');
+    voteBtn.textContent = 'Vote as Raw Finest';
+  } else if (isMyVote) {
+    voteBtn.disabled = false;
+    voteBtn.classList.add('my-vote');
+    voteBtn.title    = 'Your current vote — click to withdraw';
+    voteBtn.textContent = '★ Your Vote';
+    voteBtn.onclick  = () => castRawVote(leader._submissionId);
+  } else {
+    voteBtn.disabled = false;
+    voteBtn.classList.remove('my-vote');
+    voteBtn.title    = 'Vote for this as the finest raw example';
+    voteBtn.textContent = 'Vote as Raw Finest';
+    voteBtn.onclick  = () => castRawVote(leader._submissionId);
+  }
+
+  // Populate the all-submissions panel (does not toggle open/closed — preserves state)
+  _renderRawAllPanel(sorted, voteCounts, myVote, c);
+}
+
+function _renderRawAllPanel(sorted, voteCounts, myVote, c) {
+  const allPanel = document.getElementById('raw-all-panel');
+  allPanel.innerHTML = '';
+
+  sorted.forEach((s, i) => {
+    const submissionId = s._submissionId;
+    const votes    = voteCounts[submissionId] || 0;
+    const isMyVote = myVote === submissionId;
+    const imgUrl   = s.imgs && s.imgs.length ? s.imgs[0] : null;
+    const dateStr  = s.dt ? s.dt.slice(0, 10) : '—';
+
+    const row = document.createElement('div');
+    row.className = 'raw-sub-row';
+
+    // Thumbnail
+    const thumbDiv = document.createElement('div');
+    thumbDiv.className = 'raw-sub-thumb';
+    if (imgUrl) {
+      thumbDiv.innerHTML = `<img src="${imgUrl}" alt="Scan" onclick="window.open('${imgUrl}','_blank')"
+        onerror="this.parentElement.innerHTML='<div class=\'no-scan-sm\'>no scan</div>'">`;
+      const img = thumbDiv.querySelector('img');
+      if (img && typeof attachMagnifier === 'function') attachMagnifier(img);
+    } else {
+      thumbDiv.innerHTML = `<div class="no-scan-sm">no<br>scan</div>`;
+    }
+
+    // Body
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'raw-sub-body';
+    bodyDiv.innerHTML = `
+      <div class="raw-sub-handle">${i === 0 ? '★ ' : ''}${escapeHtml(s.cl || 'unknown')}</div>
+      <div class="raw-sub-meta"><span class="vote-tally">${votes}</span> vote${votes !== 1 ? 's' : ''} · ${dateStr}</div>
+    `;
+
+    // Vote button
+    const btnDiv = document.createElement('div');
+    const btn    = document.createElement('button');
+    btn.className = 'raw-vote-btn' + (isMyVote ? ' my-vote' : '');
+    btn.textContent = isMyVote ? '★ Voted' : 'Vote';
+    btn.title = isMyVote ? 'Your vote — click to withdraw' : 'Vote for this submission';
+    if (!currentUser) {
+      btn.disabled = true;
+      btn.title    = 'Sign in to vote';
+    } else {
+      btn.onclick = () => castRawVote(submissionId);
+    }
+    btnDiv.appendChild(btn);
+
+    row.appendChild(thumbDiv);
+    row.appendChild(bodyDiv);
+    row.appendChild(btnDiv);
+    allPanel.appendChild(row);
+  });
+}
+
+function toggleRawAllPanel() {
+  const panel = document.getElementById('raw-all-panel');
+  const link  = panel.previousElementSibling; // the view-all button
+  const isOpen = panel.classList.toggle('open');
+  // Update chevron on the button
+  const viewAllBtn = document.querySelector('.raw-view-all-link');
+  if (viewAllBtn) viewAllBtn.textContent = isOpen
+    ? 'Hide raw submissions ▴'
+    : 'View all raw submissions ▾';
+}
+
+// Cast or withdraw a raw-finest vote.
+// submissionId: the submission being voted for.
+// If the user already voted for submissionId → withdraw (delete row).
+// Otherwise → upsert (move or create vote).
+async function castRawVote(submissionId) {
+  if (!submissionId) return;  // initial HTML default — ignore
+  if (!currentUser) { alert('Please sign in to vote.'); return; }
+  if (!_detailComboId) { console.warn('castRawVote: no combo id'); return; }
+
+  const comboId = _detailComboId;
+  const cache   = _rawVoteCache[comboId] || { voteCounts: {}, myVote: null };
+  const prior   = cache.myVote;
+  const isWithdraw = prior === submissionId;
+
+  try {
+    if (isWithdraw) {
+      // Remove vote
+      const { error } = await db
+        .from('raw_votes')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('combination_id', comboId);
+      if (error) throw error;
+      cache.myVote = null;
+      if (prior && cache.voteCounts[prior] > 0) cache.voteCounts[prior]--;
+    } else {
+      // Upsert: insert or update the user's row for this combo
+      const { error } = await db
+        .from('raw_votes')
+        .upsert(
+          { user_id: currentUser.id, combination_id: comboId, submission_id: submissionId },
+          { onConflict: 'user_id,combination_id' }
+        );
+      if (error) throw error;
+      // Update local counts
+      if (prior && cache.voteCounts[prior] > 0) cache.voteCounts[prior]--;
+      cache.voteCounts[submissionId] = (cache.voteCounts[submissionId] || 0) + 1;
+      cache.myVote = submissionId;
+    }
+
+    _rawVoteCache[comboId] = cache;
+
+    // Re-render the raw block with updated vote state
+    const sorted = _sortRawSubs(_detailRawSubs, cache.voteCounts);
+    _renderRawAllPanel(sorted, cache.voteCounts, cache.myVote, null);
+    _refreshRawLeader(sorted, cache.voteCounts, cache.myVote);
+
+  } catch (err) {
+    console.error('castRawVote error:', err.message);
+    alert('Vote could not be saved: ' + err.message);
+  }
+}
+
+// Re-render only the leader portion of the raw-finest-block after a vote
+function _refreshRawLeader(sorted, voteCounts, myVote) {
+  const thumbEl  = document.getElementById('raw-finest-thumb');
+  const subEl    = document.getElementById('raw-finest-submitter');
+  const votesEl  = document.getElementById('raw-finest-votes');
+  const voteBtn  = document.getElementById('raw-vote-leader-btn');
+
+  const leader = sorted[0];
+  if (!leader) return;
+
+  const leaderVotes = voteCounts[leader._submissionId] || 0;
+  const leaderImg   = leader.imgs && leader.imgs.length ? leader.imgs[0] : null;
+
+  if (leaderImg) {
+    thumbEl.innerHTML = `<img src="${leaderImg}" alt="Raw finest scan"
+      onerror="this.parentElement.innerHTML='<div class=\'no-scan-label\'>no scan</div>'">`;
+    const img = thumbEl.querySelector('img');
+    if (img && typeof attachMagnifier === 'function') attachMagnifier(img);
+  } else {
+    thumbEl.innerHTML = `<div class="no-scan-label">no scan<br>on file</div>`;
+  }
+
+  subEl.textContent = leader.cl || 'unknown';
+  votesEl.innerHTML = leaderVotes === 0
+    ? '<span>No votes yet</span>'
+    : `<strong>${leaderVotes}</strong> vote${leaderVotes !== 1 ? 's' : ''}`;
+
+  const isMyVote = myVote === leader._submissionId;
+  voteBtn.className = 'raw-vote-btn' + (isMyVote ? ' my-vote' : '');
+  voteBtn.disabled  = !currentUser;
+  if (isMyVote) {
+    voteBtn.textContent = '★ Your Vote';
+    voteBtn.title       = 'Your current vote — click to withdraw';
+  } else {
+    voteBtn.textContent = 'Vote as Raw Finest';
+    voteBtn.title       = currentUser ? 'Vote for this as the finest raw example' : 'Sign in to vote';
+  }
+  voteBtn.onclick = () => castRawVote(leader._submissionId);
 }
 
 function openSubmissionInModal(player, back, s, isFinest) {
