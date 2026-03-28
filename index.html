@@ -3560,6 +3560,45 @@
       <div style="font-family:'Courier Prime',monospace;font-size:0.58rem;color:var(--text-secondary);line-height:1.6;">
         Your email is never displayed publicly. Net54 handle is optional and can be set after signing in.
       </div>
+
+      <!-- ── GUEST SUBMISSION PATH ── -->
+      <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px dashed var(--rule);">
+        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.75rem;">
+          — or submit without an account —
+        </div>
+        <p style="font-family:'Libre Baskerville',serif;font-size:0.8rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.25rem;">
+          Guest submissions are held for admin review before entering the archive. Your name or handle will appear in the record as credited contributor.
+        </p>
+        <div style="margin-bottom:1rem;">
+          <label style="font-family:'Courier Prime',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary);display:block;margin-bottom:0.35rem;">
+            Your Name or Collector Handle <span style="color:var(--rust);">*</span>
+          </label>
+          <input type="text" id="guest-handle-input" maxlength="80"
+            placeholder="e.g. broadleaf_bob or Bob Smith"
+            oninput="checkGuestSubmitReady()"
+            style="width:100%;font-family:'Courier Prime',monospace;font-size:0.82rem;padding:0.5rem 0.75rem;border:1px solid var(--rule);background:var(--parchment);color:var(--ink);outline:none;">
+          <div style="font-family:'Courier Prime',monospace;font-size:0.6rem;color:var(--text-muted);margin-top:0.25rem;">
+            Free text — no verification. Displayed publicly on your submission.
+          </div>
+        </div>
+        <button class="auth-btn" id="guest-submit-section-btn"
+          onclick="showGuestSubmitForm()"
+          style="margin-top:0;opacity:0.4;cursor:not-allowed;"
+          disabled>
+          Continue as Guest →
+        </button>
+      </div>
+    </div>
+
+    <!-- ── GUEST SUBMISSION FORM BODY ── -->
+    <div id="guest-submit-form-body" style="display:none;">
+      <div style="background:rgba(139,58,26,0.06);border:1px dashed rgba(139,58,26,0.3);padding:0.6rem 0.9rem;margin-bottom:1.25rem;font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--rust);letter-spacing:0.04em;">
+        ⚑ Guest submission — held for admin review before entering the archive.
+        Submitting as: <strong id="guest-handle-display">—</strong>
+        <button onclick="cancelGuestSubmitForm()" style="margin-left:1rem;font-family:'Courier Prime',monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">
+          ← Change
+        </button>
+      </div>
     </div>
 
     <!-- ── IDENTITY BAR (signed in) ── -->
@@ -3730,6 +3769,7 @@
     </div>
 
     <button class="submit-main-btn" id="submit-main-btn" disabled onclick="submitCard()">Verify Cert to Continue →</button>
+    <button class="submit-main-btn" id="guest-submit-main-btn" disabled onclick="submitCardAsGuest()" style="display:none;background:var(--sepia);">Verify Cert to Continue →</button>
     </div><!-- /submit-form-body -->
   </div>
 
@@ -3988,6 +4028,20 @@
         </div>
       </div>
 
+      <!-- ── GUEST SUBMISSIONS ── -->
+      <div style="margin-bottom:3rem;">
+        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
+          Guest Submissions — Pending Review
+          <span id="admin-guest-count" style="margin-left:1rem;background:var(--sepia);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
+        </div>
+        <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem;line-height:1.6;">
+          Submissions made without a registered account. Review scans and card details, then Approve (moves to normal pending or attested flow) or Reject.
+        </p>
+        <div id="admin-guest-list">
+          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
+        </div>
+      </div>
+
       <!-- ── ALL SUBMISSIONS — DELETE ── -->
       <div style="margin-bottom:3rem;">
         <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
@@ -4007,6 +4061,7 @@
             <option value="confirmed">Confirmed</option>
             <option value="attested">Attested</option>
             <option value="pending">Pending</option>
+            <option value="guest_pending">Guest Pending</option>
             <option value="rejected">Rejected</option>
           </select>
         </div>
@@ -4536,7 +4591,7 @@ async function checkAdminStatus(user) {
 }
 
 async function loadAdminQueues() {
-  await Promise.all([loadAllSubmissions(), loadPendingSubmissions(), loadFlaggedSubmissions(), loadIssueFlags()]);
+  await Promise.all([loadAllSubmissions(), loadPendingSubmissions(), loadFlaggedSubmissions(), loadIssueFlags(), loadGuestSubmissions()]);
 }
 
 // ── All Submissions — Delete queue ───────────────────────────────────────────
@@ -4936,6 +4991,148 @@ async function loadIssueFlags() {
   });
 }
 
+// ── Guest Submissions Queue ──────────────────────────────────────────────────
+async function loadGuestSubmissions() {
+  const list    = document.getElementById('admin-guest-list');
+  const countEl = document.getElementById('admin-guest-count');
+  if (!list) return;
+  list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>';
+
+  try {
+    const { data, error } = await db
+      .from('submissions')
+      .select(`
+        id, grade, grader, cert_number, submitted_at, raw_notes, is_graded, guest_handle,
+        combinations (
+          players ( name ),
+          backs ( name )
+        ),
+        scans ( storage_path, label, sort_order )
+      `)
+      .eq('status', 'guest_pending')
+      .order('submitted_at', { ascending: true });
+
+    if (error) throw error;
+
+    if (countEl) countEl.textContent = data?.length || 0;
+
+    if (!data || data.length === 0) {
+      list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No guest submissions pending.</p>';
+      return;
+    }
+
+    list.innerHTML = '';
+    data.forEach(s => {
+      const player  = s.combinations?.players?.name || '—';
+      const back    = s.combinations?.backs?.name   || '—';
+      const handle  = s.guest_handle || 'Anonymous';
+      const cert    = s.cert_number || '—';
+      const grade   = s.grade || '—';
+      const grader  = s.grader || '';
+      const isRaw   = !s.is_graded;
+      const date    = s.submitted_at ? s.submitted_at.slice(0, 10) : '—';
+
+      const sortedScans = (s.scans || []).sort((a, b) => a.sort_order - b.sort_order);
+      const scanHtml = sortedScans.length
+        ? `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.85rem;">
+            ${sortedScans.map(sc => {
+              const url = db.storage.from('scans').getPublicUrl(sc.storage_path).data.publicUrl;
+              return `<a href="${url}" target="_blank" rel="noopener" title="${sc.label || 'Scan'}">
+                <img src="${url}" alt="${sc.label || 'Scan'}"
+                  style="height:90px;width:auto;object-fit:cover;border:1px solid var(--rule);cursor:zoom-in;"
+                  onerror="this.parentElement.style.display='none'">
+              </a>`;
+            }).join('')}
+          </div>`
+        : `<p style="font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);font-style:italic;margin-bottom:0.85rem;">No scans uploaded.</p>`;
+
+      const card = document.createElement('div');
+      card.className = 'admin-card';
+      card.id = 'admin-guest-' + s.id;
+      card.innerHTML = `
+        <div class="admin-card-header">
+          <div>
+            <div class="admin-player">${escapeHtml(player)}</div>
+            <div class="admin-back">${escapeHtml(back)}</div>
+          </div>
+          <span style="font-family:'Courier Prime',monospace;font-size:0.62rem;letter-spacing:0.08em;padding:0.15rem 0.5rem;border:1px solid var(--sepia);color:var(--sepia);">
+            ${isRaw ? 'Guest · Raw' : 'Guest · Graded'}
+          </span>
+        </div>
+        <div class="admin-meta-row">
+          ${!isRaw ? `<span>Grade <strong>${escapeHtml(grade)}</strong></span>` : ''}
+          ${!isRaw ? `<span>Grader <strong>${escapeHtml(grader)}</strong></span>` : ''}
+          ${!isRaw ? `<span>Cert <strong>${escapeHtml(cert)}</strong></span>` : ''}
+          <span>Submitted by <strong>${escapeHtml(handle)}</strong></span>
+          <span>Date <strong>${date}</strong></span>
+        </div>
+        ${s.raw_notes ? `<div style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);margin-bottom:0.75rem;font-style:italic;">"${escapeHtml(s.raw_notes.slice(0, 200))}${s.raw_notes.length > 200 ? '…' : ''}"</div>` : ''}
+        ${scanHtml}
+        <div class="admin-actions">
+          <button class="admin-btn admin-btn-confirm" onclick="adminApproveGuest('${s.id}', ${isRaw})">✓ Approve</button>
+          <button class="admin-btn admin-btn-reject"  onclick="adminDecide('${s.id}', 'rejected', 'guest')">✕ Reject</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+
+  } catch (err) {
+    if (list) list.innerHTML = `<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error loading guest submissions: ${err.message}</p>`;
+  }
+}
+
+async function adminApproveGuest(submissionId, isRaw) {
+  const cardId = 'admin-guest-' + submissionId;
+  const card   = document.getElementById(cardId);
+  if (!card) return;
+
+  // For graded guest submissions, collect the grade (same as pending SGC flow)
+  let gradeValue = null;
+  if (!isRaw) {
+    gradeValue = prompt('Enter the verified grade for this submission (e.g. PSA 5, SGC 7):');
+    if (gradeValue === null) return; // cancelled
+    gradeValue = gradeValue.trim() || null;
+  }
+
+  card.querySelectorAll('.admin-btn').forEach(b => { b.disabled = true; });
+
+  try {
+    // Raw guest → attested; graded guest → pending (needs normal pending review) or confirmed
+    const newStatus = isRaw ? 'attested' : 'pending';
+    const updatePayload = {
+      status:     newStatus,
+      updated_at: new Date().toISOString(),
+    };
+    if (gradeValue) {
+      updatePayload.grade = gradeValue;
+      updatePayload.cert_verified_at = new Date().toISOString();
+      const m = gradeValue.match(/[\d.]+/);
+      if (m) updatePayload.grade_numeric = parseFloat(m[0]);
+    }
+
+    const { error } = await db
+      .from('submissions')
+      .update(updatePayload)
+      .eq('id', submissionId);
+
+    if (error) throw error;
+
+    const actionsEl = card.querySelector('.admin-actions');
+    actionsEl.innerHTML = `<span class="admin-result-tag admin-result-confirmed">✓ Approved → ${newStatus}</span>`;
+
+    const countEl = document.getElementById('admin-guest-count');
+    if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
+
+    if (newStatus === 'attested') {
+      await Promise.all([loadChecklistFromSupabase(), loadAttestedFromSupabase()]);
+    }
+
+  } catch (err) {
+    card.querySelectorAll('.admin-btn').forEach(b => { b.disabled = false; });
+    alert('Error approving guest submission: ' + err.message);
+  }
+}
+
 async function adminDecide(submissionId, newStatus, queue) {
   const cardId = `admin-${queue}-${submissionId}`;
   const card   = document.getElementById(cardId);
@@ -4983,7 +5180,9 @@ async function adminDecide(submissionId, newStatus, queue) {
     actionsEl.innerHTML = `<span class="admin-result-tag ${tagClass}">✓ ${tagLabel}</span>`;
 
     // Update badge count
-    const countId = queue === 'pending' ? 'admin-pending-count' : 'admin-flagged-count';
+    const countId = queue === 'pending' ? 'admin-pending-count'
+                  : queue === 'guest'   ? 'admin-guest-count'
+                  :                       'admin-flagged-count';
     const countEl = document.getElementById(countId);
     if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
 
@@ -5788,6 +5987,11 @@ function applyAuthState(user) {
     document.getElementById('auth-display-name').textContent    = name;
     document.getElementById('auth-provider-label').textContent  = `Signed in via ${provider}`;
 
+    // Close guest form if it was open, restore auth submit button
+    document.getElementById('guest-submit-form-body').style.display = 'none';
+    document.getElementById('submit-main-btn').style.display        = '';
+    document.getElementById('guest-submit-main-btn').style.display  = 'none';
+
     // Header auth widget
     document.getElementById('header-auth-guest').style.display  = 'none';
     document.getElementById('header-auth-user').style.display   = '';
@@ -5803,6 +6007,11 @@ function applyAuthState(user) {
     document.getElementById('auth-gate').style.display          = '';
     document.getElementById('auth-identity-bar').style.display  = 'none';
     document.getElementById('submit-form-body').style.display   = 'none';
+
+    // Reset guest form state
+    document.getElementById('guest-submit-form-body').style.display = 'none';
+    document.getElementById('submit-main-btn').style.display        = '';
+    document.getElementById('guest-submit-main-btn').style.display  = 'none';
 
     // Header auth widget
     document.getElementById('header-auth-guest').style.display  = '';
@@ -5953,6 +6162,8 @@ function checkSubmitReady() {
   btn.style.opacity = ready ? '1' : '0.4';
   btn.style.cursor  = ready ? 'pointer' : 'not-allowed';
   btn.textContent   = ready ? 'Submit Card →' : (isRaw ? 'Select player and back to continue →' : 'Verify Cert to Continue →');
+  // Also update guest button if guest form is active
+  checkGuestFormReady();
 }
 
 function toggleCertField() {
@@ -7197,7 +7408,266 @@ function formatThreadDate(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// ── SUBMIT CARD ──────────────────────────────────────────────────────────────
+// ── GUEST SUBMIT FORM FLOW ───────────────────────────────────────────────────
+
+function checkGuestSubmitReady() {
+  const handle = (document.getElementById('guest-handle-input')?.value || '').trim();
+  const btn    = document.getElementById('guest-submit-section-btn');
+  if (!btn) return;
+  btn.disabled       = handle.length === 0;
+  btn.style.opacity  = handle.length ? '1' : '0.4';
+  btn.style.cursor   = handle.length ? 'pointer' : 'not-allowed';
+}
+
+function showGuestSubmitForm() {
+  const handle = (document.getElementById('guest-handle-input')?.value || '').trim();
+  if (!handle) return;
+
+  // Hide the full auth gate, show the guest banner + shared form
+  document.getElementById('auth-gate').style.display           = 'none';
+  document.getElementById('guest-submit-form-body').style.display = '';
+  document.getElementById('submit-form-body').style.display    = '';
+  document.getElementById('guest-handle-display').textContent  = handle;
+
+  // Swap submit buttons: hide authenticated one, show guest one
+  document.getElementById('submit-main-btn').style.display       = 'none';
+  document.getElementById('guest-submit-main-btn').style.display = '';
+
+  // Run checkSubmitReady logic on the guest button
+  checkGuestFormReady();
+}
+
+function cancelGuestSubmitForm() {
+  // Back to auth gate
+  document.getElementById('auth-gate').style.display              = '';
+  document.getElementById('guest-submit-form-body').style.display = 'none';
+  document.getElementById('submit-form-body').style.display       = 'none';
+
+  // Restore authenticated submit button
+  document.getElementById('submit-main-btn').style.display        = '';
+  document.getElementById('guest-submit-main-btn').style.display  = 'none';
+}
+
+function checkGuestFormReady() {
+  // Mirrors checkSubmitReady() but targets the guest button
+  const isRaw  = document.getElementById('grading-select').value === 'RAW';
+  const player = document.getElementById('player-select').value;
+  const brand  = document.getElementById('back-brand-select').value;
+  const btn    = document.getElementById('guest-submit-main-btn');
+  if (!btn) return;
+  const ready       = player && brand && (isRaw || verifiedData);
+  btn.disabled      = !ready;
+  btn.style.opacity = ready ? '1' : '0.4';
+  btn.style.cursor  = ready ? 'pointer' : 'not-allowed';
+  btn.textContent   = ready ? 'Submit as Guest →' : (isRaw ? 'Select player and back to continue →' : 'Verify Cert to Continue →');
+}
+
+// ── SUBMIT CARD AS GUEST ─────────────────────────────────────────────────────
+async function submitCardAsGuest() {
+  const handle = (document.getElementById('guest-handle-input')?.value || '').trim();
+  if (!handle) { alert('Please enter a name or handle before submitting.'); return; }
+
+  const player    = document.getElementById('player-select').value;
+  const seriesSel = document.getElementById('brand-series-select');
+  const back      = seriesSel.value;
+  const notes     = document.getElementById('submit-notes')?.value?.trim() || '';
+  const btn       = document.getElementById('guest-submit-main-btn');
+
+  if (!player || !back) {
+    alert('Please confirm the player name and back brand before submitting.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  btn.style.opacity = '0.6';
+
+  try {
+    // Step 1: Look up combination_id
+    const { data: playerRow } = await db.from('players').select('id').eq('name', player).single();
+    const { data: backRow }   = await db.from('backs').select('id').eq('name', back).single();
+
+    if (!playerRow || !backRow) {
+      throw new Error(`Could not find player or back in database: ${player} / ${back}`);
+    }
+
+    let { data: combo } = await db
+      .from('combinations')
+      .select('id')
+      .eq('player_id', playerRow.id)
+      .eq('back_id', backRow.id)
+      .maybeSingle();
+
+    // Step 2: If new combination, insert it
+    if (!combo) {
+      const { data: newCombo, error: comboErr } = await db
+        .from('combinations')
+        .insert({ player_id: playerRow.id, back_id: backRow.id, is_in_brown: false, is_new_discovery: true, discovered_at: new Date().toISOString() })
+        .select('id')
+        .single();
+      if (comboErr) throw comboErr;
+      combo = newCombo;
+    }
+
+    // Step 3: Insert submission row with status='guest_pending', submitted_by=null
+    const isRaw  = document.getElementById('grading-select').value === 'RAW';
+    const grade  = document.getElementById('grade-input')?.value?.trim() || null;
+
+    const submissionPayload = {
+      combination_id: combo.id,
+      submitted_by:   null,            // guest — no auth user
+      guest_handle:   handle,
+      is_graded:      !isRaw,
+      grader:         isRaw ? null : (verifiedData?.company || null),
+      cert_number:    isRaw ? null : (verifiedData?.cert || null),
+      grade:          grade || null,
+      grade_numeric: (() => {
+        if (verifiedData?.gradeNumeric != null) return verifiedData.gradeNumeric;
+        const g = grade || verifiedData?.grade;
+        if (!g) return null;
+        const n = gradeToNum(g);
+        return n >= 0 ? n : null;
+      })(),
+      status:           'guest_pending',
+      cert_verified_at: null,
+      cert_data:        verifiedData ? JSON.stringify(verifiedData) : null,
+      raw_notes:        notes || null,
+    };
+
+    const { data: submission, error: subErr } = await db
+      .from('submissions')
+      .insert(submissionPayload)
+      .select('id')
+      .single();
+
+    if (subErr) {
+      if (subErr.code === '23505') throw new Error('This cert number has already been submitted.');
+      throw subErr;
+    }
+
+    // Step 4: Upload scans to guest/ prefixed path in storage
+    const ts     = Date.now();
+    const rnd    = Math.random().toString(36).slice(2, 8);
+    const prefix = `guest/${ts}-${rnd}`;
+
+    const scanRecords = [];
+    for (let i = 0; i < pendingScans.length; i++) {
+      const scan = pendingScans[i];
+      const ext  = scan.file.name.split('.').pop().toLowerCase();
+      const path = `${prefix}/${submission.id}/${i}-${ts}.${ext}`;
+
+      const { error: uploadErr } = await db.storage
+        .from('scans')
+        .upload(path, scan.file, { contentType: scan.file.type, upsert: false });
+
+      if (uploadErr) {
+        console.warn('Guest scan upload failed:', uploadErr.message);
+        continue;
+      }
+      scanRecords.push({
+        submission_id: submission.id,
+        storage_path:  path,
+        label:         i === 0 ? 'Front' : i === 1 ? 'Back' : `Scan ${i + 1}`,
+        sort_order:    i,
+      });
+    }
+
+    if (scanRecords.length > 0) {
+      const { error: scanErr } = await db.from('scans').insert(scanRecords);
+      if (scanErr) console.warn('Guest scan record insert failed:', scanErr.message);
+    }
+
+    // Step 5: Success — show guest-specific success message
+    showGuestSubmitSuccess(player, back, handle);
+
+    // Clean up
+    verifiedData = null;
+    pendingScans = [];
+
+  } catch (err) {
+    console.error('Guest submission error:', err);
+    alert('Submission failed: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Submit as Guest →';
+    btn.style.opacity = '1';
+  }
+}
+
+function showGuestSubmitSuccess(player, back, handle) {
+  const formBody   = document.getElementById('submit-form-body');
+  const guestBanner = document.getElementById('guest-submit-form-body');
+  if (formBody)    formBody.style.display    = 'none';
+  if (guestBanner) guestBanner.style.display = 'none';
+
+  const existing = document.getElementById('submit-success-panel');
+  if (existing) existing.remove();
+
+  const panel = document.createElement('div');
+  panel.id = 'submit-success-panel';
+  panel.style.cssText = 'text-align:center;padding:3rem 2rem;font-family:"Libre Baskerville",serif;';
+  panel.innerHTML = `
+    <div style="font-size:2rem;margin-bottom:1rem;">✓</div>
+    <h3 style="font-size:1.3rem;margin:0 0 0.5rem;color:var(--ink);">Guest submission received</h3>
+    <p style="color:var(--text-secondary);font-size:0.85rem;margin:0 0 1.5rem;line-height:1.6;">
+      <strong>${escapeHtml(player)}</strong> / <strong>${escapeHtml(back)}</strong><br>
+      Credited to: <strong>${escapeHtml(handle)}</strong>
+    </p>
+    <p style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);letter-spacing:0.05em;line-height:1.7;">
+      Your submission is held for admin review before entering the archive.<br>
+      No account is required — thank you for contributing.
+    </p>
+    <button onclick="resetGuestSubmitForm()" style="margin-top:1.5rem;font-family:'Courier Prime',monospace;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;background:var(--ink);color:var(--cream);border:none;padding:0.6rem 1.5rem;cursor:pointer;">
+      Submit Another →
+    </button>
+  `;
+
+  const section = document.getElementById('section-submit');
+  section.appendChild(panel);
+}
+
+function resetGuestSubmitForm() {
+  verifiedData = null;
+  pendingScans = [];
+
+  const successPanel = document.getElementById('submit-success-panel');
+  if (successPanel) successPanel.remove();
+
+  // Show the auth gate again (back to start)
+  document.getElementById('auth-gate').style.display              = '';
+  document.getElementById('guest-submit-form-body').style.display = 'none';
+  document.getElementById('submit-form-body').style.display       = 'none';
+  document.getElementById('submit-main-btn').style.display        = '';
+  document.getElementById('guest-submit-main-btn').style.display  = 'none';
+
+  // Clear form fields
+  const certInput = document.getElementById('cert-input');
+  if (certInput) certInput.value = '';
+  const verifyPanel = document.getElementById('verify-panel');
+  if (verifyPanel) verifyPanel.style.display = 'none';
+  const cardFields = document.getElementById('card-identity-fields');
+  if (cardFields) cardFields.style.display = 'none';
+  const gradeInput = document.getElementById('grade-input');
+  if (gradeInput) gradeInput.value = '';
+  const playerSel = document.getElementById('player-select');
+  if (playerSel) playerSel.value = '';
+  const backBrandSel = document.getElementById('back-brand-select');
+  if (backBrandSel) backBrandSel.value = '';
+  const seriesSel = document.getElementById('brand-series-select');
+  if (seriesSel) seriesSel.innerHTML = '<option value="">Select series…</option>';
+  const seriesGroup = document.getElementById('brand-series-group');
+  if (seriesGroup) seriesGroup.style.display = 'none';
+  const scanList = document.getElementById('scan-preview-list');
+  if (scanList) scanList.innerHTML = '';
+  const scanZone = document.getElementById('scan-upload-zone');
+  if (scanZone) scanZone.querySelector('p').textContent = 'DRAG & DROP SCANS HERE';
+  const notesEl = document.getElementById('submit-notes');
+  if (notesEl) notesEl.value = '';
+  const guestHandleInput = document.getElementById('guest-handle-input');
+  if (guestHandleInput) guestHandleInput.value = '';
+  checkGuestSubmitReady();
+}
+
+// ── SUBMIT CARD (AUTHENTICATED) ───────────────────────────────────────────────
 async function submitCard() {
   if (!currentUser) { alert('Please sign in to submit.'); return; }
 
