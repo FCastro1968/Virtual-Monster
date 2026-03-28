@@ -7587,7 +7587,7 @@ async function submitCardAsGuest() {
     }
 
     if (scanRecords.length > 0) {
-      const { error: scanErr } = await db.from('scans').insert(scanRecords);
+      const { error: scanErr } = await db.rpc('insert_guest_scans', { p_records: scanRecords });
       if (scanErr) console.warn('Guest scan record insert failed:', scanErr.message);
     }
 
