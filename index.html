@@ -7138,13 +7138,14 @@ async function initProgress() {
   BACKS.forEach(b => { totalByBack[b] = 0; confirmedByBack[b] = 0; });
 
   try {
+    // Query 1: totals and confirmed counts from checklist view
     let all = [];
     let from = 0;
     const pageSize = 1000;
     while (true) {
       const { data, error } = await db
         .from('checklist')
-        .select('back, status, finest_grade')
+        .select('back, status')
         .range(from, from + pageSize - 1);
       if (error) throw error;
       if (!data || data.length === 0) break;
@@ -7157,11 +7158,31 @@ async function initProgress() {
       if (!(b in totalByBack)) return;
       totalByBack[b]++;
       if (row.status === 'Confirmed') confirmedByBack[b]++;
-      const fg = parseFloat(row.finest_grade);
-      if (!isNaN(fg)) {
-        gradeSum[b]   = (gradeSum[b]   || 0) + fg;
-        gradeCount[b] = (gradeCount[b] || 0) + 1;
-      }
+    });
+
+    // Query 2: grade_numeric from finest-known confirmed submissions, joined to back name
+    let gradeRows = [];
+    from = 0;
+    while (true) {
+      const { data, error } = await db
+        .from('submissions')
+        .select('grade_numeric, combinations(backs(name))')
+        .eq('is_finest_graded', true)
+        .eq('status', 'confirmed')
+        .not('grade_numeric', 'is', null)
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      gradeRows = gradeRows.concat(data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    gradeRows.forEach(row => {
+      const b  = row.combinations?.backs?.name;
+      const fg = parseFloat(row.grade_numeric);
+      if (!b || isNaN(fg)) return;
+      gradeSum[b]   = (gradeSum[b]   || 0) + fg;
+      gradeCount[b] = (gradeCount[b] || 0) + 1;
     });
   } catch (err) {
     console.error('initProgress query error:', err);
@@ -7295,13 +7316,14 @@ async function initLeagueProgress() {
   const leagueTeams     = {};  // key: league -> Set of teams
 
   try {
+    // Query 1: totals and confirmed counts from checklist view
     let all = [];
     let from = 0;
     const pageSize = 1000;
     while (true) {
       const { data, error } = await db
         .from('checklist')
-        .select('league, team, status, finest_grade')
+        .select('league, team, status')
         .range(from, from + pageSize - 1);
       if (error) throw error;
       if (!data || data.length === 0) break;
@@ -7313,15 +7335,37 @@ async function initLeagueProgress() {
       const league = row.league || 'Unknown';
       const team   = row.team   || 'Unknown';
       const key    = league + '||' + team;
-      totalByTeam[key]     = (totalByTeam[key]     || 0) + 1;
+      totalByTeam[key] = (totalByTeam[key] || 0) + 1;
       if (row.status === 'Confirmed') confirmedByTeam[key] = (confirmedByTeam[key] || 0) + 1;
-      const fg2 = parseFloat(row.finest_grade);
-      if (!isNaN(fg2)) {
-        gradeSumTeam[key]   = (gradeSumTeam[key]   || 0) + fg2;
-        gradeCountTeam[key] = (gradeCountTeam[key] || 0) + 1;
-      }
       if (!leagueTeams[league]) leagueTeams[league] = new Set();
       leagueTeams[league].add(team);
+    });
+
+    // Query 2: grade_numeric from finest-known confirmed submissions, joined to league/team via players
+    let gradeRows = [];
+    from = 0;
+    while (true) {
+      const { data, error } = await db
+        .from('submissions')
+        .select('grade_numeric, combinations(players(league, team))')
+        .eq('is_finest_graded', true)
+        .eq('status', 'confirmed')
+        .not('grade_numeric', 'is', null)
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      gradeRows = gradeRows.concat(data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    gradeRows.forEach(row => {
+      const league = row.combinations?.players?.league || 'Unknown';
+      const team   = row.combinations?.players?.team   || 'Unknown';
+      const key    = league + '||' + team;
+      const fg     = parseFloat(row.grade_numeric);
+      if (isNaN(fg)) return;
+      gradeSumTeam[key]   = (gradeSumTeam[key]   || 0) + fg;
+      gradeCountTeam[key] = (gradeCountTeam[key] || 0) + 1;
     });
   } catch (err) {
     console.error('initLeagueProgress query error:', err);
