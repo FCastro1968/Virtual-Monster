@@ -1436,6 +1436,41 @@
   }
   .progress-subpanel { display: none; }
   .progress-subpanel.active { display: block; }
+
+  /* ── Graded / Raw mode toggle ── */
+  .progress-mode-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.1rem;
+    border: 1px solid var(--rule);
+    width: fit-content;
+  }
+  .progress-mode-btn {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.38rem 1.1rem;
+    border: none;
+    background: var(--cream);
+    color: var(--text-muted);
+    cursor: pointer;
+    border-right: 1px solid var(--rule);
+    transition: all 0.12s;
+  }
+  .progress-mode-btn:last-child { border-right: none; }
+  .progress-mode-btn:hover { color: var(--ink); background: rgba(139,105,20,0.07); }
+  .progress-mode-btn.active {
+    background: var(--ink);
+    color: var(--cream);
+    font-weight: 700;
+  }
+  .progress-mode-panel { display: none; }
+  .progress-mode-panel.active { display: block; }
+
+  /* Raw progress table: no avg-grade column — 4 cols instead of 5 */
+  .progress-table.raw-mode th:last-child,
+  .progress-table.raw-mode td:last-child { display: none; }
   .admin-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
   .admin-player { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 0.95rem; color: var(--ink); }
   .admin-back { font-family: 'Courier Prime', monospace; font-size: 0.65rem; letter-spacing: 0.06em; color: var(--text-secondary); margin-top: 0.2rem; }
@@ -3714,14 +3749,36 @@
       </div>
       <!-- Panel: Series & Back -->
       <div id="progress-panel-series" class="progress-subpanel active">
-        <div id="progress-table-wrap">
-          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+        <div class="progress-mode-bar">
+          <button class="progress-mode-btn active" onclick="switchProgressMode('series','graded',this)">Graded</button>
+          <button class="progress-mode-btn"        onclick="switchProgressMode('series','raw',this)">Raw</button>
+        </div>
+        <div id="progress-series-graded" class="progress-mode-panel active">
+          <div id="progress-table-wrap">
+            <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+          </div>
+        </div>
+        <div id="progress-series-raw" class="progress-mode-panel">
+          <div id="progress-table-wrap-raw">
+            <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+          </div>
         </div>
       </div>
       <!-- Panel: League & Team -->
       <div id="progress-panel-league" class="progress-subpanel">
-        <div id="progress-league-wrap">
-          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+        <div class="progress-mode-bar">
+          <button class="progress-mode-btn active" onclick="switchProgressMode('league','graded',this)">Graded</button>
+          <button class="progress-mode-btn"        onclick="switchProgressMode('league','raw',this)">Raw</button>
+        </div>
+        <div id="progress-league-graded" class="progress-mode-panel active">
+          <div id="progress-league-wrap">
+            <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+          </div>
+        </div>
+        <div id="progress-league-raw" class="progress-mode-panel">
+          <div id="progress-league-wrap-raw">
+            <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);">Loading…</p>
+          </div>
         </div>
       </div>
     </div>
@@ -6989,8 +7046,10 @@ const PROGRESS_GROUPS = [
   },
 ];
 
-let _progressInitDone = false;
-let _leagueProgressInitDone = false;
+let _progressInitDone        = false;
+let _leagueProgressInitDone  = false;
+let _rawSeriesInitDone       = false;
+let _rawLeagueInitDone       = false;
 
 function switchProgressTab(tab) {
   document.querySelectorAll('.progress-subtab').forEach((btn, i) => {
@@ -6998,10 +7057,33 @@ function switchProgressTab(tab) {
   });
   document.getElementById('progress-panel-series').classList.toggle('active', tab === 'series');
   document.getElementById('progress-panel-league').classList.toggle('active', tab === 'league');
-  // Lazy-init league tab on first visit
+  // Lazy-init league graded tab on first visit
   if (tab === 'league' && !_leagueProgressInitDone) {
     _leagueProgressInitDone = true;
     initLeagueProgress();
+  }
+}
+
+function switchProgressMode(subtab, mode, btn) {
+  // Toggle the mode buttons inside this sub-panel
+  const panel = document.getElementById('progress-panel-' + subtab);
+  panel.querySelectorAll('.progress-mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Toggle the mode content panels
+  const gradedId = 'progress-' + subtab + '-graded';
+  const rawId    = 'progress-' + subtab + '-raw';
+  document.getElementById(gradedId).classList.toggle('active', mode === 'graded');
+  document.getElementById(rawId).classList.toggle('active', mode === 'raw');
+
+  // Lazy-init raw tabs on first switch
+  if (mode === 'raw' && subtab === 'series' && !_rawSeriesInitDone) {
+    _rawSeriesInitDone = true;
+    initRawSeriesProgress();
+  }
+  if (mode === 'raw' && subtab === 'league' && !_rawLeagueInitDone) {
+    _rawLeagueInitDone = true;
+    initRawLeagueProgress();
   }
 }
 
@@ -7366,7 +7448,331 @@ async function initLeagueProgress() {
   wrap.appendChild(table);
 }
 
-// ── GALLERY ───────────────────────────────────────────────────────────────────
+// ── RAW SERIES PROGRESS ───────────────────────────────────────────────────────
+// Shows combinations with ≥1 ungraded submission grouped by back series.
+// No avg-grade column; progress bar = raw combinations / superset total per back.
+// Data source: submissions (is_graded=false, non-rejected) resolved via LIVE_CHECKLIST.
+
+async function initRawSeriesProgress() {
+  const wrap = document.getElementById('progress-table-wrap-raw');
+  if (!wrap) return;
+  wrap.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);">Loading raw data…</p>';
+
+  const totalByBack = {};
+  const rawByBack   = {};   // combinations with ≥1 raw sub, keyed by back name
+  BACKS.forEach(b => { totalByBack[b] = 0; rawByBack[b] = 0; });
+
+  // Populate totals from LIVE_CHECKLIST (already loaded; keyed by .b for back name)
+  if (LIVE_CHECKLIST.length > 0) {
+    LIVE_CHECKLIST.forEach(c => {
+      const backName = c.b || c.back;
+      if (backName in totalByBack) totalByBack[backName]++;
+    });
+  }
+
+  // Fetch distinct combination_ids with ≥1 active ungraded submission
+  // Reuse RAW_SUB_COUNTS if already populated; otherwise query fresh.
+  try {
+    let rawComboIds = null; // Set of combination_ids with raw subs
+    if (Object.keys(RAW_SUB_COUNTS).length > 0) {
+      // RAW_SUB_COUNTS is keyed "player|back" — build a set of those keys
+      rawComboIds = new Set(Object.keys(RAW_SUB_COUNTS));
+      // Resolve back names: for each entry in LIVE_CHECKLIST, if key is in rawComboIds, tally back
+      LIVE_CHECKLIST.forEach(c => {
+        const key      = (c.p || c.player) + '|' + (c.b || c.back);
+        const backName = c.b || c.back;
+        if (rawComboIds.has(key) && backName in rawByBack) rawByBack[backName]++;
+      });
+    } else {
+      // Query submissions table for is_graded=false combination_ids, then resolve via LIVE_CHECKLIST
+      const rawComboCounts = {};
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await db
+          .from('submissions')
+          .select('combination_id')
+          .eq('is_graded', false)
+          .not('status', 'in', '("pending","rejected","removed")')
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        data.forEach(row => {
+          if (row.combination_id != null)
+            rawComboCounts[row.combination_id] = 1; // only need existence
+        });
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      // Resolve combination_id → back name via LIVE_CHECKLIST
+      LIVE_CHECKLIST.forEach(c => {
+        if (c.combinationId != null && rawComboCounts[c.combinationId]) {
+          const backName = c.b || c.back;
+          if (backName in rawByBack) rawByBack[backName]++;
+        }
+      });
+    }
+  } catch (err) {
+    wrap.innerHTML = `<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error loading raw data: ${err.message}</p>`;
+    return;
+  }
+
+  const grandRaw   = BACKS.reduce((s, b) => s + (rawByBack[b]   || 0), 0);
+  const grandTotal = BACKS.reduce((s, b) => s + (totalByBack[b] || 0), 0);
+
+  // Summary line
+  const summaryEl = document.createElement('p');
+  summaryEl.style.cssText = "font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.05em;margin-bottom:0.9rem;";
+  summaryEl.textContent = `${grandTotal.toLocaleString()} superset · ${grandRaw.toLocaleString()} raw finest elected`;
+
+  const table = document.createElement('table');
+  table.className = 'progress-table raw-mode';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Back</th>
+        <th>Raw Finest %</th>
+        <th class="align-right">Raw Finest</th>
+        <th class="align-right">%</th>
+      </tr>
+    </thead>
+    <tbody id="progress-raw-series-tbody"></tbody>
+  `;
+
+  const tbody = table.querySelector('#progress-raw-series-tbody');
+
+  PROGRESS_GROUPS.forEach(group => {
+    let groupRaw   = 0;
+    let groupTotal = 0;
+    group.backs.forEach(b => {
+      groupRaw   += rawByBack[b]   || 0;
+      groupTotal += totalByBack[b] || 0;
+    });
+    const groupPct = groupTotal > 0 ? Math.round(groupRaw / groupTotal * 100) : 0;
+
+    const hdr = document.createElement('tr');
+    hdr.className = 'progress-group-header';
+    hdr.innerHTML = `
+      <td colspan="2" style="padding:0.55rem 0.75rem;font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:700;color:var(--ink);">${group.label}</td>
+      <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${groupRaw.toLocaleString()} / ${groupTotal.toLocaleString()}</td>
+      <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--rust);white-space:nowrap;">${groupPct}%</td>
+    `;
+    tbody.appendChild(hdr);
+
+    group.backs.forEach(back => {
+      const raw   = rawByBack[back]   || 0;
+      const total = totalByBack[back] || 0;
+      const pct      = total > 0 ? Math.round(raw / total * 100) : 0;
+      const barWidth = total > 0 ? (raw / total * 100).toFixed(1) : 0;
+      const color    = getProgressColor(back);
+
+      const row = document.createElement('tr');
+      row.className = 'progress-row';
+      row.innerHTML = `
+        <td class="progress-back-name">${back}</td>
+        <td class="progress-bar-cell">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width:${barWidth}%;background:${color};opacity:0.7;"></div>
+          </div>
+        </td>
+        <td class="progress-confirmed">${raw.toLocaleString()} / ${total.toLocaleString()}</td>
+        <td class="progress-pct">${pct}%</td>
+      `;
+      tbody.appendChild(row);
+    });
+  });
+
+  // Grand total row
+  const grandPct      = grandTotal > 0 ? Math.round(grandRaw / grandTotal * 100) : 0;
+  const grandBarWidth = grandTotal > 0 ? (grandRaw / grandTotal * 100).toFixed(1) : 0;
+
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'progress-group-header';
+  totalRow.style.borderTop = '2px solid var(--rule)';
+  totalRow.innerHTML = `
+    <td style="padding:0.6rem 0.75rem;font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:700;color:var(--ink);">Total</td>
+    <td style="padding:0.6rem 0.75rem;">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" style="width:${grandBarWidth}%;background:var(--text-muted);opacity:0.7;"></div>
+      </div>
+    </td>
+    <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${grandRaw.toLocaleString()} / ${grandTotal.toLocaleString()}</td>
+    <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--text-primary);white-space:nowrap;">${grandPct}%</td>
+  `;
+  tbody.appendChild(totalRow);
+
+  wrap.innerHTML = '';
+  wrap.appendChild(summaryEl);
+  wrap.appendChild(table);
+}
+
+// ── RAW LEAGUE PROGRESS ───────────────────────────────────────────────────────
+// Shows combinations with ≥1 ungraded submission grouped by league / team.
+// Data source: submissions (is_graded=false) resolved via LIVE_CHECKLIST for league/team.
+
+async function initRawLeagueProgress() {
+  const wrap = document.getElementById('progress-league-wrap-raw');
+  if (!wrap) return;
+  wrap.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);">Loading raw data…</p>';
+
+  const totalByTeam = {};  // "League||Team" → superset total
+  const rawByTeam   = {};  // "League||Team" → distinct combinations with ≥1 raw sub
+  const leagueTeams = {};  // league → Set of teams
+
+  // Step 1: populate team totals + league structure from LIVE_CHECKLIST
+  LIVE_CHECKLIST.forEach(c => {
+    const league = c.league || 'Unknown';
+    const team   = c.team   || 'Unknown';
+    const key    = league + '||' + team;
+    totalByTeam[key] = (totalByTeam[key] || 0) + 1;
+    if (!leagueTeams[league]) leagueTeams[league] = new Set();
+    leagueTeams[league].add(team);
+  });
+
+  // Step 2: resolve raw combination_ids to league/team using LIVE_CHECKLIST
+  try {
+    if (Object.keys(RAW_SUB_COUNTS).length > 0) {
+      // Fast path: RAW_SUB_COUNTS already has "player|back" keys
+      const rawKeys = new Set(Object.keys(RAW_SUB_COUNTS));
+      LIVE_CHECKLIST.forEach(c => {
+        const key      = (c.p || c.player) + '|' + (c.b || c.back);
+        const league   = c.league || 'Unknown';
+        const team     = c.team   || 'Unknown';
+        const teamKey  = league + '||' + team;
+        if (rawKeys.has(key)) rawByTeam[teamKey] = (rawByTeam[teamKey] || 0) + 1;
+      });
+    } else {
+      // Slow path: fetch from submissions, resolve via combinationId
+      const rawComboCounts = {};
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await db
+          .from('submissions')
+          .select('combination_id')
+          .eq('is_graded', false)
+          .not('status', 'in', '("pending","rejected","removed")')
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        data.forEach(row => { if (row.combination_id != null) rawComboCounts[row.combination_id] = 1; });
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      LIVE_CHECKLIST.forEach(c => {
+        if (c.combinationId != null && rawComboCounts[c.combinationId]) {
+          const league  = c.league || 'Unknown';
+          const team    = c.team   || 'Unknown';
+          const teamKey = league + '||' + team;
+          rawByTeam[teamKey] = (rawByTeam[teamKey] || 0) + 1;
+        }
+      });
+    }
+  } catch (err) {
+    wrap.innerHTML = `<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error loading raw league data: ${err.message}</p>`;
+    return;
+  }
+
+  const grandRaw   = Object.values(rawByTeam).reduce((s, v) => s + v, 0);
+  const grandTotal = Object.values(totalByTeam).reduce((s, v) => s + v, 0);
+
+  const summaryEl = document.createElement('p');
+  summaryEl.style.cssText = "font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.05em;margin-bottom:0.9rem;";
+  summaryEl.textContent = `${grandTotal.toLocaleString()} superset · ${grandRaw.toLocaleString()} raw finest elected`;
+
+  const table = document.createElement('table');
+  table.className = 'progress-table raw-mode';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Team</th>
+        <th>Raw Finest %</th>
+        <th class="align-right">Raw Finest</th>
+        <th class="align-right">%</th>
+      </tr>
+    </thead>
+    <tbody id="progress-raw-league-tbody"></tbody>
+  `;
+
+  const tbody = table.querySelector('#progress-raw-league-tbody');
+
+  const knownLeagues   = LEAGUE_ORDER.filter(l => leagueTeams[l]);
+  const unknownLeagues = Object.keys(leagueTeams).filter(l => !LEAGUE_ORDER.includes(l)).sort();
+  const orderedLeagues = [...knownLeagues, ...unknownLeagues];
+
+  let grandConfirmedAccum = 0;
+  let grandTotalAccum     = 0;
+
+  orderedLeagues.forEach(league => {
+    const teams = Array.from(leagueTeams[league]).sort();
+
+    let leagueRaw   = 0;
+    let leagueTotal = 0;
+    teams.forEach(team => {
+      const key = league + '||' + team;
+      leagueRaw   += rawByTeam[key]   || 0;
+      leagueTotal += totalByTeam[key] || 0;
+    });
+    grandConfirmedAccum += leagueRaw;
+    grandTotalAccum     += leagueTotal;
+
+    const leaguePct = leagueTotal > 0 ? Math.round(leagueRaw / leagueTotal * 100) : 0;
+
+    const hdr = document.createElement('tr');
+    hdr.className = 'progress-group-header';
+    hdr.innerHTML = `
+      <td colspan="2" style="padding:0.55rem 0.75rem;font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:700;color:var(--ink);">${league}</td>
+      <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${leagueRaw.toLocaleString()} / ${leagueTotal.toLocaleString()}</td>
+      <td style="text-align:right;padding:0.55rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--rust);white-space:nowrap;">${leaguePct}%</td>
+    `;
+    tbody.appendChild(hdr);
+
+    teams.forEach(team => {
+      const key      = league + '||' + team;
+      const raw      = rawByTeam[key]   || 0;
+      const total    = totalByTeam[key] || 0;
+      const pct      = total > 0 ? Math.round(raw / total * 100) : 0;
+      const barWidth = total > 0 ? (raw / total * 100).toFixed(1) : 0;
+
+      const row = document.createElement('tr');
+      row.className = 'progress-row';
+      row.innerHTML = `
+        <td class="progress-back-name">${team}</td>
+        <td class="progress-bar-cell">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width:${barWidth}%;background:var(--text-muted);opacity:0.7;"></div>
+          </div>
+        </td>
+        <td class="progress-confirmed">${raw.toLocaleString()} / ${total.toLocaleString()}</td>
+        <td class="progress-pct">${pct}%</td>
+      `;
+      tbody.appendChild(row);
+    });
+  });
+
+  // Grand total
+  const grandPct      = grandTotalAccum > 0 ? Math.round(grandConfirmedAccum / grandTotalAccum * 100) : 0;
+  const grandBarWidth = grandTotalAccum > 0 ? (grandConfirmedAccum / grandTotalAccum * 100).toFixed(1) : 0;
+
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'progress-group-header';
+  totalRow.style.borderTop = '2px solid var(--rule)';
+  totalRow.innerHTML = `
+    <td style="padding:0.6rem 0.75rem;font-family:'Playfair Display',serif;font-size:0.88rem;font-weight:700;color:var(--ink);">Total</td>
+    <td style="padding:0.6rem 0.75rem;">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" style="width:${grandBarWidth}%;background:var(--text-muted);opacity:0.7;"></div>
+      </div>
+    </td>
+    <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.7rem;color:var(--text-secondary);white-space:nowrap;">${grandConfirmedAccum.toLocaleString()} / ${grandTotalAccum.toLocaleString()}</td>
+    <td style="text-align:right;padding:0.6rem 0.75rem;font-family:'Courier Prime',monospace;font-size:0.78rem;font-weight:700;color:var(--text-primary);white-space:nowrap;">${grandPct}%</td>
+  `;
+  tbody.appendChild(totalRow);
+
+  wrap.innerHTML = '';
+  wrap.appendChild(summaryEl);
+  wrap.appendChild(table);
+}
 
 let _galleryShowing   = 0;   // how many cards currently rendered
 let _galleryInitDone  = false;
