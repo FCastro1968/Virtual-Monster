@@ -8077,9 +8077,8 @@ async function initRawGallery() {
     const { data, error } = await db
       .from('submissions')
       .select(`
-        id, vote_count,
+        id, combination_id, vote_count,
         combinations (
-          combination_id,
           players ( name, is_hof ),
           backs    ( name )
         ),
@@ -8094,11 +8093,37 @@ async function initRawGallery() {
     if (error) throw error;
 
     // Client-side dedup: keep only the vote-leader per combination
+    // (data is already sorted vote_count desc so first seen = winner)
     const seen = new Map();
     for (const s of (data || [])) {
-      const comboId = s.combinations?.combination_id || s.id;
+      const comboId = s.combination_id ?? s.id;
       if (!seen.has(comboId)) seen.set(comboId, s);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     _rawGalleryAllData = [...seen.values()].map(s => {
       const player  = s.combinations?.players?.name   || '—';
