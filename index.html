@@ -3940,7 +3940,7 @@ async function loadChecklistFromSupabase() {
     while (true) {
       const { data, error } = await db
         .from('checklist')
-        .select('player, back, is_hof, series, league, team, status, confirmed_count, attested_count, finest_grade, finest_grader, finest_cert, finest_collector')
+        .select('combination_id, player, back, is_hof, series, league, team, status, confirmed_count, attested_count, finest_grade, finest_grader, finest_cert, finest_collector')
         .range(from, from + pageSize - 1);
       if (error) {
         console.error('Supabase query error:', JSON.stringify(error), error.message, error.code, error.hint);
@@ -3974,6 +3974,7 @@ async function loadChecklistFromSupabase() {
       collector:      row.finest_collector || null,
       confirmedCount: row.confirmed_count  || 0,
       attestedCount:  row.attested_count   || 0,
+      combinationId:  row.combination_id   || null,
       // player/back aliases used by detail panel and openDetail
       player:    row.player,
       back:      row.back,
@@ -3986,6 +3987,7 @@ async function loadChecklistFromSupabase() {
     populateTeamDropdown(document.getElementById('league-filter') ? document.getElementById('league-filter').value : '');
     renderTable(converted);
     initSubstats(converted);
+    loadRawSubCounts(); // needs LIVE_CHECKLIST populated first
 
   } catch (err) {
     console.error('Supabase load failed, using hardcoded data:', JSON.stringify(err), err.message, err);
@@ -7545,40 +7547,49 @@ function galleryLoadMore() {
 populateTeamDropdown('');
 loadChecklistFromSupabase();
 loadRawFinestCount();
-loadRawSubCounts();
 
 // Global map: "player|back" → count of is_graded=false submissions
 const RAW_SUB_COUNTS = {};
 
 async function loadRawSubCounts() {
   try {
+    // Step 1: fetch all is_graded=false submission combination_ids
+    const rawComboCounts = {}; // combination_id (int) → count
     let from = 0;
     const pageSize = 1000;
     while (true) {
       const { data, error } = await db
         .from('submissions')
-        .select('combination_id, combination:combinations!inner(player:players!inner(name), back:backs!inner(name))')
+        .select('combination_id')
         .eq('is_graded', false)
         .not('status', 'in', '("pending","rejected","removed")')
         .range(from, from + pageSize - 1);
       if (error) { console.warn('loadRawSubCounts error:', error.message); break; }
       if (!data || data.length === 0) break;
       data.forEach(row => {
-        const player = row.combination?.player?.name;
-        const back   = row.combination?.back?.name;
-        if (player && back) {
-          const key = player + '|' + back;
-          RAW_SUB_COUNTS[key] = (RAW_SUB_COUNTS[key] || 0) + 1;
-        }
+        if (row.combination_id != null)
+          rawComboCounts[row.combination_id] = (rawComboCounts[row.combination_id] || 0) + 1;
       });
       if (data.length < pageSize) break;
       from += pageSize;
     }
-    // Re-render table with updated raw counts if checklist already loaded
+
+    // Step 2: build combination_id → "player|back" map from already-loaded LIVE_CHECKLIST
+    const resolvedCount = Object.keys(rawComboCounts).length;
+    console.log(`loadRawSubCounts: ${Object.values(rawComboCounts).reduce((a,b)=>a+b,0)} raw subs across ${resolvedCount} combinations`);
+    LIVE_CHECKLIST.forEach(c => {
+      if (c.combinationId != null) {
+        const count = rawComboCounts[c.combinationId] || 0;
+        if (count > 0) RAW_SUB_COUNTS[c.p + '|' + c.b] = count;
+      }
+    });
+    console.log(`loadRawSubCounts: resolved ${Object.keys(RAW_SUB_COUNTS).length} player|back keys (combinationId available on ${LIVE_CHECKLIST.filter(c=>c.combinationId!=null).length} of ${LIVE_CHECKLIST.length} checklist rows)`);
+
+    // Step 3: patch currentData and re-render if checklist already rendered
     if (currentData && currentData.length > 0) {
       currentData = currentData.map(c => ({
         ...c,
-        rawSubCount: c.rawSubs || RAW_SUB_COUNTS[c.player+'|'+c.back] || 0,
+        rawSubCount: c.rawSubs || RAW_SUB_COUNTS[c.player + '|' + c.back] || 0,
       }));
       renderPage();
     }
