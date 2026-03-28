@@ -5097,8 +5097,8 @@ async function adminApproveGuest(submissionId, isRaw) {
   card.querySelectorAll('.admin-btn').forEach(b => { b.disabled = true; });
 
   try {
-    // Raw guest → attested; graded guest → pending (needs normal pending review) or confirmed
-    const newStatus = isRaw ? 'attested' : 'pending';
+    // Raw guest → attested; graded guest → confirmed (admin approval is sufficient)
+    const newStatus = isRaw ? 'attested' : 'confirmed';
     const updatePayload = {
       status:     newStatus,
       updated_at: new Date().toISOString(),
@@ -5123,8 +5123,8 @@ async function adminApproveGuest(submissionId, isRaw) {
     const countEl = document.getElementById('admin-guest-count');
     if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
 
-    if (newStatus === 'attested') {
-      await Promise.all([loadChecklistFromSupabase(), loadAttestedFromSupabase()]);
+    if (newStatus === 'attested' || newStatus === 'confirmed') {
+      await Promise.all([loadChecklistFromSupabase(), loadRecentConfirmedFromSupabase(), loadAttestedFromSupabase()]);
     }
 
   } catch (err) {
