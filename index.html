@@ -2821,7 +2821,9 @@
     #checklist-table th:nth-child(5),
     #checklist-table td:nth-child(5) { display: none; } /* Finest Known */
     #checklist-table th:nth-child(6),
-    #checklist-table td:nth-child(6) { display: none; } /* Subs */
+    #checklist-table td:nth-child(6) { display: none; } /* Graded */
+    #checklist-table th:nth-child(7),
+    #checklist-table td:nth-child(7) { display: none; } /* Raw */
 
     /* Detail panel */
     .detail-body { grid-template-columns: 1fr; }
@@ -3224,7 +3226,7 @@
             <button class="sort-btn active" onclick="setSort('player', this)">Player</button>
             <button class="sort-btn" onclick="setSort('back', this)">Back</button>
             <button class="sort-btn" onclick="setSort('grade', this)">Grade</button>
-            <button class="sort-btn" onclick="setSort('subs', this)">Subs</button>
+            <button class="sort-btn" onclick="setSort('subs', this)">Graded</button>
             <button class="sort-btn" onclick="setSort('rawsubs', this)">Raw</button>
           </div>
         </div>
@@ -3250,7 +3252,8 @@
                 <th>Back Brand</th>
                 <th>Status</th>
                 <th>Finest Known</th>
-                <th style="text-align:center;">Subs</th>
+                <th style="text-align:center;">Graded</th>
+                <th style="text-align:center;">Raw</th>
               </tr>
             </thead>
             <tbody id="table-body">
@@ -4185,17 +4188,20 @@ function renderPage(){
     const gradeCell = c.grade
       ? `<span class="grade-display">${c.grade}<span class="grade-company">${c.grader}</span></span>`
       : `<span class="no-submission">none yet</span>`;
-    const subCount = c.submissions > 0 ? `${c.submissions}` : `<span class="no-submission" style="font-style:italic;">be first</span>`;
-    const rawSubBadge = c.rawSubCount > 0
-      ? `<span title="${c.rawSubCount} ungraded submission${c.rawSubCount>1?'s':''}" style="display:inline-block;margin-left:0.3rem;font-size:0.6rem;color:var(--text-muted);font-style:italic;letter-spacing:0;">(+${c.rawSubCount}R)</span>`
-      : '';
+    const subCount  = c.submissions > 0
+      ? `${c.submissions}`
+      : `<span class="no-submission" style="font-style:italic;">—</span>`;
+    const rawCount  = c.rawSubCount > 0
+      ? `${c.rawSubCount}`
+      : `<span class="no-submission" style="font-style:italic;">—</span>`;
     tr.innerHTML = `
       <td><div class="player-name">${c.player}</div><div class="player-team">Series ${c.series}</div></td>
       <td style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">${c.team}</td>
       <td class="col-back"><span class="back-badge ${getBadgeClass(c.back)}">${c.back}</span></td>
       <td><span class="status-dot ${statusClass}"></span>${c.status}</td>
       <td>${gradeCell}</td>
-      <td style="font-family:'Courier Prime',monospace;font-size:0.72rem;text-align:center;white-space:nowrap;">${subCount}${rawSubBadge}</td>
+      <td style="font-family:'Courier Prime',monospace;font-size:0.72rem;text-align:center;">${subCount}</td>
+      <td style="font-family:'Courier Prime',monospace;font-size:0.72rem;text-align:center;">${rawCount}</td>
     `;
     tbody.appendChild(tr);
   });
