@@ -7575,7 +7575,7 @@ async function submitCardAsGuest() {
         .upload(path, scan.file, { contentType: scan.file.type, upsert: false });
 
       if (uploadErr) {
-        console.warn('Guest scan upload failed:', uploadErr.message);
+        console.warn('Guest scan upload failed:', JSON.stringify(uploadErr));
         continue;
       }
       scanRecords.push({
