@@ -1119,6 +1119,32 @@
     flex-shrink: 0;
   }
   .flag-link:hover { opacity: 1; background: #6b2a10; border-color: #6b2a10; }
+
+  /* ── Raw finest vote button ── */
+  .vote-raw-btn {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 0.2rem 0.55rem;
+    margin-left: auto;
+    border: 1px solid var(--rule);
+    background: var(--parchment);
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .vote-raw-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); background: rgba(201,146,42,0.08); }
+  .vote-raw-btn.voted {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--ink);
+    font-weight: 700;
+    cursor: default;
+  }
+  .vote-raw-btn:disabled { opacity: 0.35; cursor: default; }
   .flag-form {
     display: none;
     margin-top: 0.5rem;
@@ -5171,7 +5197,8 @@ function _initScanCarousel(urls, loading) {
 }
 
 function _renderScan() {
-  const placeholder = document.querySelector('.card-placeholder');
+  const gradedPanel = document.getElementById('detail-graded-panel');
+  const placeholder = gradedPanel ? gradedPanel.querySelector('.card-placeholder') : document.querySelector('.card-placeholder');
   const prev    = document.getElementById('scan-prev');
   const next    = document.getElementById('scan-next');
   const counter = document.getElementById('scan-counter');
@@ -5430,16 +5457,17 @@ function _renderDetailPanel(c) {
 
   // If we have a scan, make sure the placeholder-inner text is gone
   if (allScans.length === 0) {
-    const placeholder = document.querySelector('.card-placeholder');
-    let inner = placeholder.querySelector('.card-placeholder-inner');
-    if (!inner) {
+    const _gp = document.getElementById('detail-graded-panel');
+    const placeholder = _gp ? _gp.querySelector('.card-placeholder') : document.querySelector('.card-placeholder');
+    let inner = placeholder ? placeholder.querySelector('.card-placeholder-inner') : null;
+    if (placeholder && !inner) {
       placeholder.insertAdjacentHTML('afterbegin', `<div class="card-placeholder-inner">
         <div class="card-placeholder-name">${c.player.toUpperCase()}</div>
         <div class="card-placeholder-team">${c.back.toUpperCase()}</div>
         <div class="card-placeholder-year">T206 · 1909–11</div>
         <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
       </div>`);
-    } else {
+    } else if (inner) {
       inner.querySelector('.card-placeholder-name') && (inner.querySelector('.card-placeholder-name').textContent = c.player.toUpperCase());
       inner.querySelector('.card-placeholder-team') && (inner.querySelector('.card-placeholder-team').textContent = c.back.toUpperCase());
     }
@@ -5503,24 +5531,13 @@ function _renderDetailPanel(c) {
   const rawSubs = (SUBMISSIONS[c.player+'|'+c.back] || []).filter(s => s.raw);
   if (rawSubs.length > 0) {
     rawList.innerHTML = '';
-    rawSubs.forEach((s, i) => {
-      const hasScans = s.imgs && s.imgs.length > 0;
-      const row = document.createElement('div');
-      row.className = 'submission-row';
-      row.style.cssText = 'opacity:0.8;cursor:pointer;';
-      row.title = hasScans ? 'View scans on file' : 'No scans on file';
-      row.innerHTML = `
-        <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
-        <span class="sub-collector">${escapeHtml(s.cl || '')}</span>
-        <span class="sub-cert" style="font-style:italic;">ungraded · ${hasScans ? 'scans on file' : 'no scans'}</span>
-        <span class="sub-grade" style="color:var(--text-secondary);">Raw</span>
-        ${hasScans ? `<span style="font-family:'Courier Prime',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.15rem 0.45rem;border:1px solid var(--rule);color:var(--text-secondary);background:var(--parchment);white-space:nowrap;">⊕ Scans</span>` : ''}
-      `;
-      row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
-      row.addEventListener('mouseleave', () => row.style.background = '');
-      row.addEventListener('click', () => openSubmissionInModal(c.player, c.back, s, i === 0));
-      rawList.appendChild(row);
-    });
+    // In raw context, load current user's vote for this combo first, then render
+    if (_detailContext === 'raw') {
+      _renderRawSubsList(rawList, rawSubs, c, null);          // render immediately
+      _loadAndApplyUserRawVote(rawList, rawSubs, c);          // async: update vote state
+    } else {
+      _renderRawSubsList(rawList, rawSubs, c, null);          // no vote UI outside raw context
+    }
   } else {
     rawList.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.65rem;color:var(--text-muted);padding:0.5rem 0;font-style:italic;">No raw submissions for this combination.</p>';
   }
@@ -5533,6 +5550,121 @@ function closeDetailBtn() {
   document.getElementById('detail-overlay').classList.remove('open');
   document.body.style.overflow = '';
   _detailContext = null;
+}
+
+// ── RAW FINEST VOTING ─────────────────────────────────────────────────────────
+
+// Render the raw submissions list, applying vote state if known.
+// votedSubId: the submission_id the current user has voted for (null = unknown/none)
+function _renderRawSubsList(rawList, rawSubs, c, votedSubId) {
+  rawList.innerHTML = '';
+  const inRawContext = _detailContext === 'raw';
+
+  rawSubs.forEach((s, i) => {
+    const hasScans  = s.imgs && s.imgs.length > 0;
+    const isVoted   = votedSubId && s._submissionId === votedSubId;
+
+    const row = document.createElement('div');
+    row.className = 'submission-row';
+    row.id = 'raw-sub-row-' + s._submissionId;
+    row.style.cssText = 'opacity:0.85;cursor:pointer;';
+    row.title = hasScans ? 'View scans on file' : 'No scans on file';
+
+    // Vote button — only shown in raw context
+    let voteBtn = '';
+    if (inRawContext) {
+      if (!currentUser) {
+        voteBtn = `<button class="vote-raw-btn" disabled title="Sign in to vote">★ Vote</button>`;
+      } else if (isVoted) {
+        voteBtn = `<button class="vote-raw-btn voted" disabled>★ Voted</button>`;
+      } else {
+        voteBtn = `<button class="vote-raw-btn" id="vote-btn-${s._submissionId}">★ Vote</button>`;
+      }
+    }
+
+    row.innerHTML = `
+      <span class="sub-rank ${i===0?'first':''}">${i===0?'★':i+1}</span>
+      <span class="sub-collector">${escapeHtml(s.cl || '')}</span>
+      <span class="sub-cert" style="font-style:italic;">ungraded · ${hasScans ? 'scans on file' : 'no scans'}</span>
+      <span class="sub-grade" style="color:var(--text-secondary);">Raw</span>
+      ${hasScans ? `<span style="font-family:'Courier Prime',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.15rem 0.45rem;border:1px solid var(--rule);color:var(--text-secondary);background:var(--parchment);white-space:nowrap;">⊕ Scans</span>` : ''}
+      ${voteBtn}
+    `;
+
+    row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
+    row.addEventListener('mouseleave', () => row.style.background = '');
+    row.addEventListener('click', () => openSubmissionInModal(c.player, c.back, s, i === 0));
+
+    rawList.appendChild(row);
+
+    // Wire vote button click (stop propagation so it doesn't open scan modal)
+    if (inRawContext && currentUser && !isVoted) {
+      const btn = rawList.querySelector('#vote-btn-' + s._submissionId);
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          castRawVote(c, s._submissionId, rawList, rawSubs);
+        });
+      }
+    }
+  });
+}
+
+// Fetch the current user's existing vote for this combo, then re-render with state applied
+async function _loadAndApplyUserRawVote(rawList, rawSubs, c) {
+  if (!currentUser) return;
+  try {
+    const comboId = c.combinationId || null;
+    if (!comboId) return;
+    const { data, error } = await db
+      .from('raw_votes')
+      .select('submission_id')
+      .eq('user_id', currentUser.id)
+      .eq('combination_id', comboId)
+      .maybeSingle();
+    if (error) throw error;
+    const votedSubId = data?.submission_id || null;
+    _renderRawSubsList(rawList, rawSubs, c, votedSubId);
+  } catch (e) {
+    console.warn('Could not load user raw vote:', e.message);
+  }
+}
+
+// Cast (or change) a raw finest vote, then refresh the list and panel
+async function castRawVote(c, submissionId, rawList, rawSubs) {
+  if (!currentUser) return;
+  const comboId = c.combinationId || null;
+  if (!comboId) return;
+
+  // Optimistically disable all vote buttons to prevent double-click
+  rawList.querySelectorAll('.vote-raw-btn').forEach(b => {
+    b.disabled = true;
+    b.textContent = '…';
+  });
+
+  try {
+    const { error } = await db
+      .from('raw_votes')
+      .upsert({
+        user_id:        currentUser.id,
+        combination_id: comboId,
+        submission_id:  submissionId,
+      }, { onConflict: 'user_id,combination_id' });
+
+    if (error) throw error;
+
+    // Re-render the list with the new voted state
+    _renderRawSubsList(rawList, rawSubs, c, submissionId);
+
+    // Refresh the raw finest panel to reflect potential new leader
+    _renderRawFinestPanel(c);
+
+  } catch (e) {
+    console.error('castRawVote error:', e.message);
+    // Restore buttons on failure
+    _renderRawSubsList(rawList, rawSubs, c, null);
+    _loadAndApplyUserRawVote(rawList, rawSubs, c);
+  }
 }
 
 function openSubmissionInModal(player, back, s, isFinest) {
@@ -8804,7 +8936,8 @@ function attachMagnifierToAll() {
 
 // ── Carousel placeholder — wire magnifier at the container level ──────────────
 function wireCarouselMagnifier() {
-  const placeholder = document.querySelector('.card-placeholder');
+  const _gp = document.getElementById('detail-graded-panel');
+  const placeholder = _gp ? _gp.querySelector('.card-placeholder') : document.querySelector('.card-placeholder');
   if (!placeholder || placeholder._magWired) return;
   placeholder._magWired = true;
 
