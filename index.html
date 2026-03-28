@@ -4006,8 +4006,9 @@
       <button class="close-btn" onclick="closeDetailBtn()">✕ Close</button>
     </div>
     <div class="detail-body">
-      <div class="finest-panel">
-        <p class="finest-label">Finest Known — Graded</p>
+      <!-- Graded Finest panel (shown in graded context or default) -->
+      <div class="finest-panel" id="detail-graded-panel">
+        <p class="finest-label">Finest Known</p>
         <div class="card-placeholder">
           <div class="card-placeholder-inner">
             <div class="card-placeholder-name" id="detail-card-name">TY COBB</div>
@@ -4025,19 +4026,32 @@
           <div class="meta-item"><label>Cert #</label><value id="detail-cert">—</value></div>
           <div class="meta-item"><label>Documented By</label><value id="detail-collector">—</value></div>
         </div>
-
-        <div id="raw-finest-block" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--rule);">
-          <p class="finest-label" style="color:var(--text-secondary);">Finest Known — Raw</p>
-          <div style="background:var(--parchment);border:1px solid var(--rule);padding:0.75rem;font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);line-height:1.6;" id="raw-finest-meta">
-            No raw submissions yet for this combination.
+      </div>
+      <!-- Raw Finest panel (shown only in raw context) -->
+      <div class="finest-panel" id="detail-raw-panel" style="display:none;">
+        <p class="finest-label" style="color:var(--text-secondary);">Raw Finest</p>
+        <div class="card-placeholder">
+          <div class="card-placeholder-inner">
+            <div class="card-placeholder-name" id="raw-detail-card-name">TY COBB</div>
+            <div class="card-placeholder-team" id="raw-detail-card-team">DETROIT · A.L.</div>
+            <div class="card-placeholder-year">T206 · 1909–11</div>
+            <div style="margin-top:1rem;font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;">[ scan pending submission ]</div>
           </div>
+          <button class="scan-arrow left"  id="raw-scan-prev" onclick="stepRawScan(-1)" disabled>&#8249;</button>
+          <button class="scan-arrow right" id="raw-scan-next" onclick="stepRawScan(1)"  disabled>&#8250;</button>
+          <div class="scan-counter hidden" id="raw-scan-counter"></div>
+        </div>
+        <div class="finest-meta">
+          <div class="meta-item"><label>Submitted By</label><value id="raw-detail-submitter">—</value></div>
+          <div class="meta-item"><label>Community Votes</label><value id="raw-detail-votes">—</value></div>
         </div>
       </div>
+      <!-- Submissions panel -->
       <div class="submissions-panel">
-        <p class="sub-title">All Submissions — <span id="detail-back-label">Piedmont 150</span></p>
+        <p class="sub-title" id="detail-graded-subs-title">All Submissions — <span id="detail-back-label">Piedmont 150</span></p>
         <div id="submissions-list"></div>
         <div id="raw-submissions-section" style="margin-top:1rem;">
-          <p class="sub-title" style="color:var(--text-secondary);opacity:0.7;">Raw Submissions</p>
+          <p class="sub-title" id="detail-raw-subs-title" style="color:var(--text-secondary);opacity:0.7;">Raw Submissions</p>
           <div id="raw-submissions-list"></div>
         </div>
         <div class="submit-cta" onclick="closeDetailBtn(); showSection('submit', document.querySelectorAll('.nav-btn')[2])">
@@ -5224,9 +5238,137 @@ function stepScan(dir) {
   _renderScan();
 }
 
+// ── RAW FINEST PANEL CAROUSEL ─────────────────────────────────────────────────
+let _rawScanUrls  = [];
+let _rawScanIndex = 0;
+
+function _initRawScanCarousel(urls) {
+  _rawScanUrls  = urls || [];
+  _rawScanIndex = 0;
+  _renderRawScan();
+}
+
+function _renderRawScan() {
+  const panel   = document.getElementById('detail-raw-panel');
+  const ph      = panel ? panel.querySelector('.card-placeholder') : null;
+  if (!ph) return;
+  const prev    = document.getElementById('raw-scan-prev');
+  const next    = document.getElementById('raw-scan-next');
+  const counter = document.getElementById('raw-scan-counter');
+
+  if (!_rawScanUrls.length) {
+    const staleImg = ph.querySelector('img.carousel-img');
+    if (staleImg) staleImg.remove();
+    const inner = ph.querySelector('.card-placeholder-inner');
+    if (inner) {
+      const lbl = inner.querySelector('.scan-status-label');
+      if (lbl) lbl.textContent = '[ scan pending submission ]';
+    }
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
+    if (counter) counter.classList.add('hidden');
+    return;
+  }
+
+  const existingInner = ph.querySelector('.card-placeholder-inner');
+  if (existingInner) existingInner.remove();
+
+  const url = _rawScanUrls[_rawScanIndex];
+  const existingImg = ph.querySelector('img.carousel-img');
+  if (existingImg) {
+    existingImg.src = url;
+  } else {
+    const img = document.createElement('img');
+    img.className = 'carousel-img';
+    img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;margin:auto;cursor:pointer;';
+    img.alt = 'Raw scan';
+    img.onclick = () => window.open(url, '_blank');
+    img.onerror = () => { img.style.display = 'none'; };
+    ph.insertBefore(img, ph.querySelector('.scan-arrow.left'));
+    img.src = url;
+  }
+
+  if (prev) prev.disabled = _rawScanIndex === 0;
+  if (next) next.disabled = _rawScanIndex === _rawScanUrls.length - 1;
+  if (counter) {
+    if (_rawScanUrls.length > 1) {
+      counter.textContent = `${_rawScanIndex + 1} / ${_rawScanUrls.length}`;
+      counter.classList.remove('hidden');
+    } else {
+      counter.classList.add('hidden');
+    }
+  }
+}
+
+function stepRawScan(dir) {
+  _rawScanIndex = Math.max(0, Math.min(_rawScanUrls.length - 1, _rawScanIndex + dir));
+  _renderRawScan();
+}
+
+// Populate the raw finest panel from the vote-leading raw submission for this combo.
+// Async: fetches raw_votes for this combination to determine the winner.
+async function _renderRawFinestPanel(c) {
+  const nameEl      = document.getElementById('raw-detail-card-name');
+  const teamEl      = document.getElementById('raw-detail-card-team');
+  const submitterEl = document.getElementById('raw-detail-submitter');
+  const votesEl     = document.getElementById('raw-detail-votes');
+
+  // Populate placeholder text immediately
+  if (nameEl) nameEl.textContent = c.player.toUpperCase();
+  if (teamEl) teamEl.textContent = c.back.toUpperCase();
+  _initRawScanCarousel([]);
+
+  const rawSubs = (SUBMISSIONS[c.player+'|'+c.back] || []).filter(s => s.raw);
+  if (!rawSubs.length) {
+    if (submitterEl) submitterEl.textContent = '—';
+    if (votesEl)     votesEl.textContent     = '—';
+    return;
+  }
+
+  // Build a map of submissionId -> cached sub for quick lookup
+  const subById = new Map(rawSubs.map(s => [s._submissionId, s]));
+
+  // Fetch raw_votes for this combination to find the vote-leader
+  let leader    = rawSubs[0];  // default: earliest submitted (rawSubs sorted date asc for raw)
+  let voteCount = 0;
+
+  try {
+    const comboId = c.combinationId || c.id || null;
+    if (comboId) {
+      const { data: votes } = await db
+        .from('raw_votes')
+        .select('submission_id')
+        .eq('combination_id', comboId);
+
+      if (votes && votes.length > 0) {
+        // Tally votes per submission
+        const tally = new Map();
+        for (const v of votes) {
+          tally.set(v.submission_id, (tally.get(v.submission_id) ?? 0) + 1);
+        }
+        // Find winner
+        let bestId = null, bestCount = 0;
+        for (const [subId, count] of tally) {
+          if (count > bestCount) { bestCount = count; bestId = subId; }
+        }
+        voteCount = bestCount;
+        const votedSub = subById.get(bestId);
+        if (votedSub) leader = votedSub;
+      }
+    }
+  } catch (e) {
+    console.warn('raw_votes fetch for detail panel failed:', e.message);
+  }
+
+  _initRawScanCarousel(leader.imgs || []);
+  if (submitterEl) submitterEl.textContent = leader.cl || '—';
+  if (votesEl)     votesEl.textContent     = voteCount > 0 ? voteCount : 'None yet';
+}
+
 async function openDetail(c) {
   // Clear stale scans immediately before showing the panel, show loading state
   _initScanCarousel([], true);
+  _initRawScanCarousel([]);
   document.getElementById('detail-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   _renderDetailPanel(c);
@@ -5245,6 +5387,37 @@ function _renderDetailPanel(c) {
   document.getElementById('detail-grader').textContent = c.grader || '—';
   document.getElementById('detail-cert').textContent = c.cert || '—';
   document.getElementById('detail-collector').textContent = c.collector || '—';
+
+  // Show/hide panels based on which gallery opened the detail
+  const gradedPanel     = document.getElementById('detail-graded-panel');
+  const rawPanel        = document.getElementById('detail-raw-panel');
+  const gradedSubsTitle = document.getElementById('detail-graded-subs-title');
+  const rawSection      = document.getElementById('raw-submissions-section');
+  const rawSubsTitle    = document.getElementById('detail-raw-subs-title');
+
+  if (_detailContext === 'raw') {
+    // Raw gallery: show raw finest panel + raw submissions only
+    if (gradedPanel)     gradedPanel.style.display     = 'none';
+    if (rawPanel)        rawPanel.style.display        = '';
+    if (gradedSubsTitle) gradedSubsTitle.style.display = 'none';
+    if (rawSection)      rawSection.style.display      = '';
+    if (rawSubsTitle)    rawSubsTitle.style.display    = 'none'; // title redundant when it's the only list
+    // Populate raw finest panel from the vote-leader raw submission
+    _renderRawFinestPanel(c);
+  } else if (_detailContext === 'graded') {
+    // Graded gallery: show graded finest panel + graded submissions only
+    if (gradedPanel)     gradedPanel.style.display     = '';
+    if (rawPanel)        rawPanel.style.display        = 'none';
+    if (gradedSubsTitle) gradedSubsTitle.style.display = '';
+    if (rawSection)      rawSection.style.display      = 'none';
+  } else {
+    // Default (checklist / feed): show graded panel + both submission lists
+    if (gradedPanel)     gradedPanel.style.display     = '';
+    if (rawPanel)        rawPanel.style.display        = 'none';
+    if (gradedSubsTitle) gradedSubsTitle.style.display = '';
+    if (rawSection)      rawSection.style.display      = '';
+    if (rawSubsTitle)    rawSubsTitle.style.display    = '';
+  }
   document.getElementById('detail-back-label').textContent = `${c.back} · Series ${c.series}`;
 
   // Build scan carousel — collect all images from all submissions for this combo
@@ -5271,6 +5444,10 @@ function _renderDetailPanel(c) {
       inner.querySelector('.card-placeholder-team') && (inner.querySelector('.card-placeholder-team').textContent = c.back.toUpperCase());
     }
   }
+
+  // Hide graded submissions list entirely in raw context
+  const gradedSubsSection = document.getElementById('submissions-list');
+  if (gradedSubsSection) gradedSubsSection.style.display = _detailContext === 'raw' ? 'none' : '';
 
   const list = document.getElementById('submissions-list');
   list.innerHTML = '';
@@ -5323,7 +5500,6 @@ function _renderDetailPanel(c) {
   }
 
   const rawList = document.getElementById('raw-submissions-list');
-  const rawFinest = document.getElementById('raw-finest-meta');
   const rawSubs = (SUBMISSIONS[c.player+'|'+c.back] || []).filter(s => s.raw);
   if (rawSubs.length > 0) {
     rawList.innerHTML = '';
@@ -5345,10 +5521,8 @@ function _renderDetailPanel(c) {
       row.addEventListener('click', () => openSubmissionInModal(c.player, c.back, s, i === 0));
       rawList.appendChild(row);
     });
-    rawFinest.innerHTML = `Submitted by <strong>${escapeHtml(rawSubs[0].cl || '')}</strong> · Ungraded · ${rawSubs[0].imgs && rawSubs[0].imgs.length ? 'Scans on file' : 'No scans'}`;
   } else {
     rawList.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.65rem;color:var(--text-muted);padding:0.5rem 0;font-style:italic;">No raw submissions for this combination.</p>';
-    rawFinest.textContent = 'No raw submissions yet for this combination.';
   }
 
   document.getElementById('detail-overlay').classList.add('open');
@@ -5358,6 +5532,7 @@ function _renderDetailPanel(c) {
 function closeDetailBtn() {
   document.getElementById('detail-overlay').classList.remove('open');
   document.body.style.overflow = '';
+  _detailContext = null;
 }
 
 function openSubmissionInModal(player, back, s, isFinest) {
@@ -5984,12 +6159,17 @@ function daysAgoToDisplay(n) {
 
 // Opens the full detail panel from a Recent/Attested card.
 // Looks up series from LIVE_CHECKLIST so openDetail has everything it needs.
-function openDetailFromFeed(player, back) {
+// 'graded' = opened from Graded Finest gallery, show only graded content
+// 'raw'    = opened from Raw Finest gallery, show only raw content
+// null     = opened from checklist / feed, show everything (default)
+let _detailContext = null;
+
+function openDetailFromFeed(player, back, context = null) {
+  _detailContext = context;
   const match = LIVE_CHECKLIST.find(c => c.p === player && c.b === back);
   if (match) {
     openDetail(buildCardObjects([match])[0]);
   } else {
-    // Fallback if checklist hasn't loaded yet — build a minimal object
     openDetail({ player, back, p: player, b: back, series: 'Assorted', status: null,
                  grade: null, grader: null, cert: null, collector: null, submissions: 0 });
   }
@@ -8040,11 +8220,11 @@ function galleryLoadMore() {
         </div>
       </div>`;
 
-    // Click opens the combo detail panel
+    // Click opens the combo detail panel (graded context — hide raw section)
     card.addEventListener('click', () => {
       const match = LIVE_CHECKLIST.find(c => c.player === g.player && c.back === g.back)
                  || CHECKLIST.find(c => c.p === g.player && c.b === g.back);
-      if (match) openDetailFromFeed(g.player, g.back);
+      if (match) openDetailFromFeed(g.player, g.back, 'graded');
     });
 
     grid.appendChild(card);
@@ -8304,10 +8484,11 @@ function rawGalleryLoadMore() {
         </div>
       </div>`;
 
+    // Click opens the combo detail panel (raw context — hide graded finest panel)
     card.addEventListener('click', () => {
       const match = LIVE_CHECKLIST.find(c => c.player === g.player && c.back === g.back)
                  || CHECKLIST.find(c => c.p === g.player && c.b === g.back);
-      if (match) openDetailFromFeed(g.player, g.back);
+      if (match) openDetailFromFeed(g.player, g.back, 'raw');
     });
 
     grid.appendChild(card);
