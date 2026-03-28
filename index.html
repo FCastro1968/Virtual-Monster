@@ -4349,6 +4349,7 @@ function buildCardObjects(data){
       rawSubs:   raw.length,
       rawSubCount: raw.length || RAW_SUB_COUNTS[c.p+'|'+c.b] || 0,
       topRaw,
+      combinationId: c.combinationId || null,
     };
   });
 }
