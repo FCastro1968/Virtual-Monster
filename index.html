@@ -4546,7 +4546,10 @@ async function loadFlaggedSubmissions() {
   list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>';
 
   try {
-    // Get attested submissions with their vote totals
+    // NOTE (Session 1): This queue was originally for attested submissions with
+    // net legitimacy vote score <= -3. Legitimacy votes have been retired.
+    // This query now returns all attested submissions — admin should decide
+    // whether to repurpose this queue or remove it in a future session.
     const { data: subs, error } = await db
       .from('submissions')
       .select(`
@@ -4897,48 +4900,42 @@ async function loadSubmissionsForCombo(player, back) {
       .maybeSingle();
     if (!combo) return;
 
-    // Fetch confirmed/attested submissions with submitter handle + scans
+    // Fetch all visible submissions for this combination.
+    // Exclude pending/rejected/removed — keep confirmed and any raw (is_graded=false).
+    // NOTE: rawness is identified by is_graded=false, NOT by submission status.
+    // A Confirmed combination can have raw submissions alongside its graded cert.
     const { data: subs, error } = await db
       .from('submissions')
       .select(`
-        id, grade, grader, cert_number, status, raw_notes, submitted_at,
+        id, grade, grader, cert_number, is_graded, status, raw_notes, submitted_at,
         users!submitted_by ( handle ),
         scans ( storage_path, label, sort_order )
       `)
       .eq('combination_id', combo.id)
-      .in('status', ['confirmed', 'attested']);
+      .not('status', 'in', '("pending","rejected","removed")');
 
     if (error) { console.error('loadSubmissionsForCombo query error:', error); return; }
     if (!subs || subs.length === 0) return;
 
-    // Also get net vote scores for attested submissions
-    const attestedIds = subs.filter(s => s.status === 'attested').map(s => s.id);
-    let voteMap = {};
-    if (attestedIds.length) {
-      const { data: voteTotals } = await db
-        .from('submission_vote_totals')
-        .select('submission_id, net_score')
-        .in('submission_id', attestedIds);
-      if (voteTotals) voteTotals.forEach(v => { voteMap[v.submission_id] = v.net_score; });
-    }
-
-    // Convert to the internal SUBMISSIONS format
     const SUPABASE_URL = 'https://visrbvpidnhbvpjsoxtf.supabase.co';
     const converted = subs.map(s => {
       const storageBase = `${SUPABASE_URL}/storage/v1/object/public/scans/`;
       const imgs = (s.scans || [])
         .sort((a, b) => a.sort_order - b.sort_order)
         .map(sc => storageBase + sc.storage_path);
+      // raw = submission has no grade entry (is_graded=false)
+      // This is independent of the combination's status level
+      const isRaw = s.is_graded === false;
       return {
-        g:    s.grade || 'Raw',
+        g:    isRaw ? 'Raw' : (s.grade || '—'),
         gr:   s.grader || null,
         ct:   s.cert_number || null,
         cl:   s.users?.handle || 'unknown',
         dt:   s.submitted_at ? s.submitted_at.slice(0, 10) : null,
-        raw:  s.status === 'attested',
+        raw:  isRaw,
         imgs,
         notes: s.raw_notes || null,
-        score: voteMap[s.id] ?? null,
+        score: null,   // raw_votes replaces old vote scores; loaded separately in Session 5
         id: s.id,
         _submissionId: s.id,
         _loaded: true,
@@ -4949,7 +4946,9 @@ async function loadSubmissionsForCombo(player, back) {
     converted._loaded = true;
     SUBMISSIONS[key] = converted;
 
-    // Also wire attested combos into ATTESTED_COMBOS for vote tracking
+    // Wire raw submissions into ATTESTED_COMBOS so they appear in the Recent feed.
+    // votes/userVote fields are retained for structural compatibility but no longer
+    // surfaced in the UI — legitimacy vote UI was retired in Session 1.
     converted.filter(s => s.raw).forEach(s => {
       const existing = ATTESTED_COMBOS.find(c => c._submissionId === s._submissionId);
       if (!existing) {
@@ -4958,7 +4957,7 @@ async function loadSubmissionsForCombo(player, back) {
           player, back,
           submitter: s.cl,
           daysAgo: s.dt ? Math.floor((Date.now() - new Date(s.dt)) / 86400000) : 0,
-          votes: s.score || 0,
+          votes: 0,
           userVote: 0,
           notes: s.notes || '',
           scans: s.imgs.length,
@@ -5239,15 +5238,6 @@ function openSubmissionInModal(player, back, s, isFinest) {
   }
 
   document.getElementById('smd-scan-grid').innerHTML = gridHTML;
-
-  // Hide vote row for graded submissions (only relevant for raw/attested)
-  const voteRow = document.querySelector('.scan-modal-vote-row');
-  if (voteRow) voteRow.style.display = isRaw ? '' : 'none';
-
-  document.getElementById('smd-vote-up').classList.remove('voted-up');
-  document.getElementById('smd-vote-down').classList.remove('voted-down');
-  document.getElementById('smd-vote-score').textContent = s.score != null ? s.score : '—';
-
   document.getElementById('scan-modal-overlay').classList.add('open');
 }
 
@@ -5286,9 +5276,6 @@ function applyAuthState(user) {
     checkHandleSetup(user);
     // Check admin status
     checkAdminStatus(user);
-    // Restore persisted votes — if ATTESTED_COMBOS is already loaded, do it now;
-    // otherwise loadAttestedFromSupabase will call loadUserVotes when it finishes
-    if (ATTESTED_COMBOS.length && ATTESTED_COMBOS[0]._submissionId) loadUserVotes();
   } else {
     // Submit tab auth UI
     document.getElementById('auth-gate').style.display          = '';
@@ -5886,12 +5873,6 @@ function renderAttestedList(count) {
   const sorted = [...ATTESTED_COMBOS].sort((a, b) => a.daysAgo - b.daysAgo);
   const slice = sorted.slice(0, count);
   slice.forEach(c => {
-    const score     = c.votes;
-    const scoreClass= score > 0 ? 'positive' : score < 0 ? 'negative' : '';
-    const upActive  = c.userVote === 1 ? 'voted-up'   : '';
-    const downActive= c.userVote === -1 ? 'voted-down' : '';
-    const promote   = score >= 5 ? '<span class="attest-promote-tag">⬆ Queued for graded verification</span>' : '';
-    const flagged   = score <= -3 ? '<span style="font-family:\'Courier Prime\',monospace;font-size:0.65rem;letter-spacing:0.08em;padding:0.1rem 0.45rem;border:1px solid rgba(139,58,26,0.35);color:var(--rust);background:rgba(139,58,26,0.07);">⚑ Flagged for review</span>' : '';
 
     const card = document.createElement('div');
     card.className = 'attested-card';
@@ -5909,111 +5890,19 @@ function renderAttestedList(count) {
       <div class="attested-meta">
         <span class="attested-submitter">Submitted by <strong>${escapeHtml(c.submitter || '')}</strong> · ${c.daysAgo} days ago</span>
         <button class="attested-scans-link" onclick="event.stopPropagation();openScanModal('${c.id}')">${c.scans} scan${c.scans !== 1 ? 's' : ''} on file — view &amp; review</button>
-        ${promote}${flagged}
       </div>
       ${c.notes ? `<div class="attested-notes">"${escapeHtml(c.notes)}"</div>` : ''}
-      <div class="vote-row">
-        <button class="vote-btn ${upActive}" onclick="event.stopPropagation();castVote('${c.id}', 1)" title="Upvote — I believe this combination is authentic">
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,1 11,6 1,6"/><line x1="6" y1="1" x2="6" y2="11"/></svg>
-          Corroborate
-        </button>
-        <span class="vote-score ${scoreClass}">${score > 0 ? '+' : ''}${score}</span>
-        <button class="vote-btn ${downActive}" onclick="event.stopPropagation();castVote('${c.id}', -1)" title="Downvote — I have doubts about this combination">
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,11 11,6 1,6"/><line x1="6" y1="11" x2="6" y2="1"/></svg>
-          Dispute
-        </button>
-        <span class="vote-label">${Math.abs(score)} net · community confidence</span>
-      </div>
     `;
     list.appendChild(card);
   });
 }
 
-async function castVote(id, direction) {
-  if (!currentUser) {
-    alert('Please sign in to vote.');
-    return;
-  }
-  const combo = ATTESTED_COMBOS.find(c => c.id === id);
-  if (!combo) return;
-
-  // Optimistic UI update first
-  const prevVote = combo.userVote;
-  if (combo.userVote === direction) {
-    combo.votes   -= direction;
-    combo.userVote = 0;
-  } else {
-    combo.votes   -= combo.userVote;
-    combo.votes   += direction;
-    combo.userVote = direction;
-  }
-  renderAttestedList(attestedShowing);
-  updateScanModalVote(combo);
-
-  // Persist to Supabase
-  try {
-    if (combo._submissionId) {
-      if (combo.userVote === 0) {
-        // Remove vote
-        const { error: delErr } = await db.from('votes')
-          .delete()
-          .eq('submission_id', combo._submissionId)
-          .eq('user_id', currentUser.id);
-        if (delErr) throw delErr;
-      } else {
-        // Try insert first, fall back to update if conflict
-        const { error: insErr } = await db.from('votes').insert({
-          submission_id: combo._submissionId,
-          user_id:       currentUser.id,
-          value:         combo.userVote,
-        });
-        if (insErr) {
-          if (insErr.code === '23505') {
-            // Already exists — update it
-            const { error: updErr } = await db.from('votes')
-              .update({ value: combo.userVote })
-              .eq('submission_id', combo._submissionId)
-              .eq('user_id', currentUser.id);
-            if (updErr) throw updErr;
-          } else {
-            throw insErr;
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Vote persist error:', err.message, err.code);
-    alert('Vote could not be saved: ' + err.message);
-    // Roll back optimistic update
-    combo.userVote = prevVote;
-    if (prevVote === direction) {
-      combo.votes += direction;
-    } else {
-      combo.votes += prevVote;
-      combo.votes -= direction;
-    }
-    renderAttestedList(attestedShowing);
-    updateScanModalVote(combo);
-  }
-}
-
-// Load persisted votes for current user after sign-in
-async function loadUserVotes() {
-  if (!currentUser) return;
-  const submissionIds = ATTESTED_COMBOS.map(c => c._submissionId).filter(Boolean);
-  if (!submissionIds.length) return;
-  const { data, error } = await db
-    .from('votes')
-    .select('submission_id, value')
-    .eq('user_id', currentUser.id)
-    .in('submission_id', submissionIds);
-  if (error || !data) return;
-  data.forEach(v => {
-    const combo = ATTESTED_COMBOS.find(c => c._submissionId === v.submission_id);
-    if (combo) combo.userVote = v.value;
-  });
-  renderAttestedList(attestedShowing);
-}
+// ── LEGITIMACY VOTES RETIRED (Session 1) ─────────────────────────────────────
+// castVote and loadUserVotes operated on the old `votes` table with +/-1
+// Corroborate/Dispute UI. That UI has been removed. Raw Finest voting
+// (raw_votes table) will be wired in Session 5.
+async function castVote(id, direction) { /* retired */ }
+async function loadUserVotes() { /* retired */ }
 
 let scanModalComboId = null;
 
@@ -6070,8 +5959,6 @@ function openConfirmedModal(idx) {
     })()}
   `;
 
-  // Hide vote row — confirmed cards don't need community voting
-  document.getElementById('smd-vote-score').parentElement.style.display = 'none';
   document.getElementById('scan-modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -6082,11 +5969,10 @@ function openScanModal(id) {
   scanModalComboId = id;
 
   document.getElementById('smd-player').textContent    = c.player;
-  document.getElementById('smd-back').textContent      = c.back + ' · Attested Raw';
+  document.getElementById('smd-back').textContent      = c.back + ' · Raw Submission';
   document.getElementById('smd-submitter').textContent = c.submitter;
   document.getElementById('smd-date').textContent      = c.daysAgo === 1 ? 'Yesterday' : c.daysAgo + ' days ago';
   document.getElementById('smd-notes').textContent     = c.notes || '';
-  updateScanModalVote(c);
 
   // Use real imgs from SUBMISSIONS if available, otherwise placeholders
   const rawSub = (SUBMISSIONS[c.player+'|'+c.back] || []).find(s => s.raw);
@@ -6117,28 +6003,12 @@ function openScanModal(id) {
     }
   }
 
-  document.getElementById('smd-vote-score').parentElement.style.display = '';
   document.getElementById('scan-modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
-function updateScanModalVote(c) {
-  const score = c.votes;
-  const upBtn  = document.getElementById('smd-vote-up');
-  const downBtn = document.getElementById('smd-vote-down');
-  const scoreEl = document.getElementById('smd-vote-score');
-  upBtn.className   = 'vote-btn' + (c.userVote === 1  ? ' voted-up'   : '');
-  downBtn.className = 'vote-btn' + (c.userVote === -1 ? ' voted-down' : '');
-  scoreEl.className = 'vote-score' + (score > 0 ? ' positive' : score < 0 ? ' negative' : '');
-  scoreEl.textContent = (score > 0 ? '+' : '') + score;
-}
-
-function castVoteFromModal(direction) {
-  if (!scanModalComboId) return;
-  castVote(scanModalComboId, direction);
-  const c = ATTESTED_COMBOS.find(x => x.id === scanModalComboId);
-  if (c) updateScanModalVote(c);
-}
+function updateScanModalVote(c) { /* retired — legitimacy votes removed in Session 1 */ }
+function castVoteFromModal(direction) { /* retired — legitimacy votes removed in Session 1 */ }
 
 function closeScanModal(e) {
   if (e && e.target !== document.getElementById('scan-modal-overlay')) return;
@@ -6212,6 +6082,9 @@ async function loadRecentConfirmedFromSupabase() {
 // ── LOAD ATTESTED SUBMISSIONS FROM SUPABASE ───────────────────────────────────
 async function loadAttestedFromSupabase() {
   try {
+    // Fetch raw (ungraded) submissions for the Recent feed.
+    // Rawness = is_graded=false, independent of combination status.
+    // Exclude workflow-only statuses (pending/rejected/removed).
     const { data, error } = await db
       .from('submissions')
       .select(`
@@ -6223,7 +6096,8 @@ async function loadAttestedFromSupabase() {
         ),
         scans ( storage_path, sort_order )
       `)
-      .eq('status', 'attested')
+      .eq('is_graded', false)
+      .not('status', 'in', '("pending","rejected","removed")')
       .order('submitted_at', { ascending: false })
       .limit(50);
 
@@ -6231,15 +6105,6 @@ async function loadAttestedFromSupabase() {
       renderAttestedList(attestedShowing);
       return;
     }
-
-    // Fetch vote totals for all attested submissions
-    const ids = data.map(s => s.id);
-    const { data: voteTotals } = await db
-      .from('submission_vote_totals')
-      .select('submission_id, net_score')
-      .in('submission_id', ids);
-    const voteMap = {};
-    if (voteTotals) voteTotals.forEach(v => { voteMap[v.submission_id] = v.net_score; });
 
     const SUPABASE_URL = 'https://visrbvpidnhbvpjsoxtf.supabase.co';
     const now = Date.now();
@@ -6250,7 +6115,7 @@ async function loadAttestedFromSupabase() {
       back:      s.combinations?.backs?.name   || '—',
       submitter: s.users?.handle || 'unknown',
       daysAgo:   Math.floor((now - new Date(s.submitted_at)) / 86400000),
-      votes:     voteMap[s.id] ?? 0,
+      votes:     0,      // legitimacy votes retired; raw_votes (Session 5) replaces
       userVote:  0,
       notes:     s.raw_notes || '',
       scans:     s.scans?.length || 0,
@@ -6262,8 +6127,6 @@ async function loadAttestedFromSupabase() {
     converted.forEach(c => ATTESTED_COMBOS.push(c));
     attestedShowing = Math.min(5, ATTESTED_COMBOS.length);
 
-    // Restore current user's votes if signed in
-    await loadUserVotes();
     renderAttestedList(attestedShowing);
 
   } catch (err) {
@@ -7689,18 +7552,6 @@ loadChecklistFromSupabase();
       Submitted scans — <span id="smd-scan-count">0</span> on file
     </div>
     <div class="scan-grid" id="smd-scan-grid"></div>
-    <div class="scan-modal-vote-row">
-      <span class="scan-modal-vote-label">Cast your vote after reviewing the scans:</span>
-      <button class="vote-btn" id="smd-vote-up" onclick="castVoteFromModal(1)">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,1 11,6 1,6"/><line x1="6" y1="1" x2="6" y2="11"/></svg>
-        Corroborate
-      </button>
-      <span class="vote-score" id="smd-vote-score">0</span>
-      <button class="vote-btn" id="smd-vote-down" onclick="castVoteFromModal(-1)">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,11 11,6 1,6"/><line x1="6" y1="11" x2="6" y2="1"/></svg>
-        Dispute
-      </button>
-    </div>
   </div>
 </div>
 
