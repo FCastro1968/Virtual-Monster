@@ -5658,9 +5658,12 @@ async function _loadAndApplyUserRawVote(rawList, rawSubs, c) {
 // Cast (or change) a raw finest vote, then reload vote state and refresh panel
 async function castRawVote(c, submissionId, rawList, rawSubs) {
   if (!currentUser) return;
-  const comboId = c.combinationId || null;
-  if (!comboId) {
-    console.error('castRawVote: no combinationId on combo object', c);
+
+  // Coerce to integer — combinationId comes from Supabase as a number but
+  // confirm it's not accidentally a string, which would cause a type mismatch
+  const comboId = c.combinationId ? parseInt(c.combinationId, 10) : null;
+  if (!comboId || isNaN(comboId)) {
+    _showVoteError(rawList, `Cannot vote: combination ID missing (got ${c.combinationId}). Try closing and reopening this panel.`);
     return;
   }
 
@@ -5670,15 +5673,21 @@ async function castRawVote(c, submissionId, rawList, rawSubs) {
     b.textContent = '…';
   });
 
+  // Clear any prior error
+  const priorErr = rawList.querySelector('.vote-error-msg');
+  if (priorErr) priorErr.remove();
+
   try {
-    const { error } = await db
+    const payload = { user_id: currentUser.id, combination_id: comboId, submission_id: submissionId };
+    console.log('castRawVote: upserting', payload);
+
+    const { data, error } = await db
       .from('raw_votes')
-      .upsert(
-        { user_id: currentUser.id, combination_id: comboId, submission_id: submissionId },
-        { onConflict: 'user_id,combination_id' }
-      );
+      .upsert(payload, { onConflict: 'user_id,combination_id' })
+      .select();
 
     if (error) throw error;
+    console.log('castRawVote: success', data);
 
     // Reload all vote data fresh so counts are accurate
     await _loadAndApplyUserRawVote(rawList, rawSubs, c);
@@ -5688,9 +5697,20 @@ async function castRawVote(c, submissionId, rawList, rawSubs) {
 
   } catch (e) {
     console.error('castRawVote failed:', e.message, e);
-    // Reload to restore correct state
+    _showVoteError(rawList, `Vote failed: ${e.message}`);
+    // Reload to restore correct button state
     await _loadAndApplyUserRawVote(rawList, rawSubs, c);
   }
+}
+
+function _showVoteError(rawList, msg) {
+  const existing = rawList.querySelector('.vote-error-msg');
+  if (existing) existing.remove();
+  const el = document.createElement('p');
+  el.className = 'vote-error-msg';
+  el.style.cssText = "font-family:'Courier Prime',monospace;font-size:0.65rem;color:var(--rust);padding:0.5rem 0;font-style:italic;";
+  el.textContent = msg;
+  rawList.insertAdjacentElement('afterbegin', el);
 }
 
 function openSubmissionInModal(player, back, s, isFinest) {
