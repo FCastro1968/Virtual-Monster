@@ -4607,7 +4607,7 @@ async function loadAllSubmissions() {
     const { data, error } = await db
       .from('submissions')
       .select(`
-        id, grade, grader, cert_number, status, submitted_at,
+        id, grade, grader, cert_number, status, submitted_at, guest_handle,
         users!submitted_by ( handle ),
         combinations (
           players ( name ),
@@ -4616,8 +4616,6 @@ async function loadAllSubmissions() {
       `)
       .order('submitted_at', { ascending: false })
       .limit(300);
-
-    if (error) throw error;
     // Normalize player/back onto each row for easy access
     _adminAllSubs = (data || []).map(s => ({
       ...s,
@@ -4651,7 +4649,7 @@ function renderAdminDeleteList(subs) {
   }
   list.innerHTML = '';
   subs.forEach(s => {
-    const handle  = s.users?.handle || 'unknown';
+    const handle  = submitterHandle(s);
     const grade   = s.grade || '—';
     const grader  = s.grader || '';
     const cert    = s.cert_number ? `cert #${s.cert_number}` : 'no cert';
@@ -4721,7 +4719,7 @@ async function loadPendingSubmissions() {
     const { data, error } = await db
       .from('submissions')
       .select(`
-        id, grade, grader, cert_number, submitted_at, raw_notes,
+        id, grade, grader, cert_number, submitted_at, raw_notes, guest_handle,
         users!submitted_by ( handle ),
         combinations (
           players ( name ),
@@ -4732,10 +4730,6 @@ async function loadPendingSubmissions() {
       .eq('status', 'pending')
       .order('submitted_at', { ascending: true });
 
-    if (error) throw error;
-
-    countEl.textContent = data?.length || 0;
-
     if (!data || data.length === 0) {
       list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No pending submissions.</p>';
       return;
@@ -4745,7 +4739,7 @@ async function loadPendingSubmissions() {
     data.forEach(s => {
       const player    = s.combinations?.players?.name || '—';
       const back      = s.combinations?.backs?.name   || '—';
-      const submitter = s.users?.handle || 'unknown';
+      const submitter = submitterHandle(s);
       const cert      = s.cert_number || '—';
       const grade     = s.grade || '—';
       const grader    = s.grader || 'SGC';
@@ -4817,7 +4811,7 @@ async function loadFlaggedSubmissions() {
     const { data: subs, error } = await db
       .from('submissions')
       .select(`
-        id, raw_notes, submitted_at,
+        id, raw_notes, submitted_at, guest_handle,
         users!submitted_by ( handle ),
         combinations (
           players ( name ),
@@ -4855,7 +4849,7 @@ async function loadFlaggedSubmissions() {
     flagged.forEach(s => {
       const player    = s.combinations?.players?.name || '—';
       const back      = s.combinations?.backs?.name   || '—';
-      const submitter = s.users?.handle || 'unknown';
+      const submitter = submitterHandle(s);
       const date      = s.submitted_at ? s.submitted_at.slice(0, 10) : '—';
       const score     = voteMap[s.id] ?? 0;
 
@@ -5315,7 +5309,7 @@ async function loadSubmissionsForCombo(player, back) {
     const { data: subs, error } = await db
       .from('submissions')
       .select(`
-        id, grade, grader, cert_number, is_graded, status, raw_notes, submitted_at,
+        id, grade, grader, cert_number, is_graded, status, raw_notes, submitted_at, guest_handle,
         users!submitted_by ( handle ),
         scans ( storage_path, label, sort_order )
       `)
@@ -5338,7 +5332,7 @@ async function loadSubmissionsForCombo(player, back) {
         g:    isRaw ? 'Raw' : (s.grade || '—'),
         gr:   s.grader || null,
         ct:   s.cert_number || null,
-        cl:   s.users?.handle || 'unknown',
+        cl:   submitterHandle(s),
         dt:   s.submitted_at ? s.submitted_at.slice(0, 10) : null,
         raw:  isRaw,
         imgs,
@@ -6456,13 +6450,13 @@ async function showVerifySuccess(d) {
   try {
     const { data: existing } = await db
       .from('submissions')
-      .select('id, player, back, grade, submitted_by, users!submitted_by(handle)')
+      .select('id, player, back, grade, submitted_by, guest_handle, users!submitted_by(handle)')
       .eq('cert_number', d.cert)
       .eq('status', 'confirmed')
       .maybeSingle();
 
     if (existing) {
-      const submitter = existing.users?.handle || 'another contributor';
+      const submitter = existing.users?.handle || existing.guest_handle || 'another contributor';
       dupWrap.innerHTML = `⚠ Cert #${escapeHtml(String(d.cert))} has already been submitted — <strong>${escapeHtml(existing.player)} / ${escapeHtml(existing.back)}</strong> (${escapeHtml(existing.grade)}), documented by <strong>${escapeHtml(submitter)}</strong>. Submitting again will be rejected. If you believe this is an error, please use the forum to flag it.`;
       dupWrap.style.display = '';
       // Disable the submit button so they can't accidentally proceed
@@ -6784,7 +6778,7 @@ async function loadRecentConfirmedFromSupabase() {
     const { data, error } = await db
       .from('submissions')
       .select(`
-        id, grade, grader, cert_number, submitted_at, status,
+        id, grade, grader, cert_number, submitted_at, status, guest_handle,
         users!submitted_by ( handle ),
         combinations (
           id, is_new_discovery,
@@ -6813,7 +6807,7 @@ async function loadRecentConfirmedFromSupabase() {
         grade:     s.grade    || '—',
         grader:    s.grader   || '—',
         cert:      s.cert_number || '—',
-        submitter: s.users?.handle || 'unknown',
+        submitter: submitterHandle(s),
         daysAgo,
         isNew:     s.combinations?.is_new_discovery || false,
         _submissionId: s.id,
@@ -6841,7 +6835,7 @@ async function loadAttestedFromSupabase() {
     const { data, error } = await db
       .from('submissions')
       .select(`
-        id, raw_notes, submitted_at,
+        id, raw_notes, submitted_at, guest_handle,
         users!submitted_by ( handle ),
         combinations (
           players ( name ),
@@ -6866,7 +6860,7 @@ async function loadAttestedFromSupabase() {
       id:        'db_' + s.id,
       player:    s.combinations?.players?.name || '—',
       back:      s.combinations?.backs?.name   || '—',
-      submitter: s.users?.handle || 'unknown',
+      submitter: submitterHandle(s),
       daysAgo:   Math.floor((now - new Date(s.submitted_at)) / 86400000),
       votes:     0,      // legitimacy votes retired; raw_votes (Session 5) replaces
       userVote:  0,
@@ -7297,6 +7291,12 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// Returns the display handle for a submission row, falling back to
+// guest_handle for anonymous submissions, then 'unknown'.
+function submitterHandle(s, fallback = 'unknown') {
+  return s?.users?.handle || s?.guest_handle || fallback;
 }
 
 // ── SUBMIT REPLY ──────────────────────────────────────────────
@@ -8744,7 +8744,7 @@ async function initGallery() {
     const { data, error } = await db
       .from('submissions')
       .select(`
-        id, grade, grader, cert_number, grade_numeric,
+        id, grade, grader, cert_number, grade_numeric, guest_handle,
         combinations (
           players ( name, is_hof ),
           backs    ( name )
@@ -8776,7 +8776,7 @@ async function initGallery() {
         grade:     s.grade     || '—',
         grader:    s.grader    || '—',
         cert:      s.cert_number || null,
-        collector: s.users?.handle || null,
+        collector: submitterHandle(s, null),
         imgUrl,
         gradeNum:  s.grade_numeric ?? -1,
       };
@@ -8956,7 +8956,7 @@ async function initRawGallery() {
     const { data, error } = await db
       .from('submissions')
       .select(`
-        id, combination_id, submitted_at,
+        id, combination_id, submitted_at, guest_handle,
         combinations (
           players ( name, is_hof ),
           backs    ( name )
@@ -9031,7 +9031,7 @@ async function initRawGallery() {
         back,
         isHof,
         votes:     s._votes ?? 0,
-        submitter: s.users?.handle || null,
+        submitter: submitterHandle(s, null),
         imgUrl,
       };
     });
