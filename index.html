@@ -3059,6 +3059,10 @@
           <div class="stat-pill"><span>Distinct Brands</span><strong>15</strong></div>
           <div class="stat-pill"><span>Distinct Players / Managers</span><strong>392</strong></div>
           <div class="stat-pill"><span>Card Fronts (Subjects)</span><strong>524</strong></div>
+          <div class="stat-pill" id="raw-finest-pill" style="margin-top:0.5rem;border-style:dashed;opacity:0.85;" title="Combinations with at least one ungraded submission on file — not additive with Confirmed/Attested/Reported">
+            <span style="color:var(--text-muted);font-style:italic;">Raw Finest Known</span>
+            <strong id="raw-finest-count" style="color:var(--text-muted);">—</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -3221,6 +3225,7 @@
             <button class="sort-btn" onclick="setSort('back', this)">Back</button>
             <button class="sort-btn" onclick="setSort('grade', this)">Grade</button>
             <button class="sort-btn" onclick="setSort('subs', this)">Subs</button>
+            <button class="sort-btn" onclick="setSort('rawsubs', this)">Raw</button>
           </div>
         </div>
 
@@ -4121,6 +4126,8 @@ function sortData(data) {
     d.sort((a, b) => gradeToNum(b.grade) - gradeToNum(a.grade) || a.player.localeCompare(b.player));
   } else if (currentSort === 'subs') {
     d.sort((a, b) => (b.submissions || 0) - (a.submissions || 0) || a.player.localeCompare(b.player));
+  } else if (currentSort === 'rawsubs') {
+    d.sort((a, b) => (b.rawSubCount || 0) - (a.rawSubCount || 0) || a.player.localeCompare(b.player));
   }
   return d;
 }
@@ -4157,6 +4164,7 @@ function buildCardObjects(data){
       collector: topSub ? topSub.cl : (c.collector || null),
       submissions: graded.length || c.confirmedCount || 0,
       rawSubs:   raw.length,
+      rawSubCount: raw.length || RAW_SUB_COUNTS[c.p+'|'+c.b] || 0,
       topRaw,
     };
   });
@@ -4176,13 +4184,16 @@ function renderPage(){
       ? `<span class="grade-display">${c.grade}<span class="grade-company">${c.grader}</span></span>`
       : `<span class="no-submission">none yet</span>`;
     const subCount = c.submissions > 0 ? `${c.submissions}` : `<span class="no-submission" style="font-style:italic;">be first</span>`;
+    const rawSubBadge = c.rawSubCount > 0
+      ? `<span title="${c.rawSubCount} ungraded submission${c.rawSubCount>1?'s':''}" style="display:inline-block;margin-left:0.3rem;font-size:0.6rem;color:var(--text-muted);font-style:italic;letter-spacing:0;">(+${c.rawSubCount}R)</span>`
+      : '';
     tr.innerHTML = `
       <td><div class="player-name">${c.player}</div><div class="player-team">Series ${c.series}</div></td>
       <td style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">${c.team}</td>
       <td class="col-back"><span class="back-badge ${getBadgeClass(c.back)}">${c.back}</span></td>
       <td><span class="status-dot ${statusClass}"></span>${c.status}</td>
       <td>${gradeCell}</td>
-      <td style="font-family:'Courier Prime',monospace;font-size:0.72rem;text-align:center;">${subCount}</td>
+      <td style="font-family:'Courier Prime',monospace;font-size:0.72rem;text-align:center;white-space:nowrap;">${subCount}${rawSubBadge}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -7533,6 +7544,61 @@ function galleryLoadMore() {
 // ── LOAD CHECKLIST — try Supabase first, fall back to hardcoded ──
 populateTeamDropdown('');
 loadChecklistFromSupabase();
+loadRawFinestCount();
+loadRawSubCounts();
+
+// Global map: "player|back" → count of is_graded=false submissions
+const RAW_SUB_COUNTS = {};
+
+async function loadRawSubCounts() {
+  try {
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await db
+        .from('submissions')
+        .select('combination_id, combination:combinations!inner(player:players!inner(name), back:backs!inner(name))')
+        .eq('is_graded', false)
+        .not('status', 'in', '("pending","rejected","removed")')
+        .range(from, from + pageSize - 1);
+      if (error) { console.warn('loadRawSubCounts error:', error.message); break; }
+      if (!data || data.length === 0) break;
+      data.forEach(row => {
+        const player = row.combination?.player?.name;
+        const back   = row.combination?.back?.name;
+        if (player && back) {
+          const key = player + '|' + back;
+          RAW_SUB_COUNTS[key] = (RAW_SUB_COUNTS[key] || 0) + 1;
+        }
+      });
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    // Re-render table with updated raw counts if checklist already loaded
+    if (currentData && currentData.length > 0) {
+      currentData = currentData.map(c => ({
+        ...c,
+        rawSubCount: c.rawSubs || RAW_SUB_COUNTS[c.player+'|'+c.back] || 0,
+      }));
+      renderPage();
+    }
+  } catch (err) {
+    console.warn('loadRawSubCounts failed:', err.message);
+  }
+}
+
+async function loadRawFinestCount() {
+  try {
+    const { count, error } = await db
+      .from('raw_finest')
+      .select('*', { count: 'exact', head: true });
+    if (error) throw error;
+    const el = document.getElementById('raw-finest-count');
+    if (el) el.textContent = (count || 0).toLocaleString();
+  } catch (err) {
+    console.warn('Could not load raw_finest count:', err.message);
+  }
+}
 
 
 </script>
