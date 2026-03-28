@@ -6036,12 +6036,27 @@ function initScanUploadZone() {
   });
 }
 
+const MAX_SCANS   = 4;
+const MAX_SCAN_MB = 15;
+
 function handleScanFiles(files) {
   if (!files || files.length === 0) return;
   const allowed = ['image/jpeg','image/png','image/tiff','image/webp'];
+
   Array.from(files).forEach(file => {
+    // Type check
     if (!allowed.includes(file.type)) {
       alert(`${file.name} is not a supported format. Please use JPG, PNG, TIFF, or WebP.`);
+      return;
+    }
+    // Size check
+    if (file.size > MAX_SCAN_MB * 1024 * 1024) {
+      alert(`${file.name} exceeds the ${MAX_SCAN_MB} MB per-file limit. Please reduce the file size and try again.`);
+      return;
+    }
+    // Count check
+    if (pendingScans.length >= MAX_SCANS) {
+      alert(`Maximum ${MAX_SCANS} scans per submission (front, back, and up to 2 detail views). Remove an existing scan to add a different one.`);
       return;
     }
     const reader = new FileReader();
