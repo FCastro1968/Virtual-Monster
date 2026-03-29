@@ -3362,16 +3362,16 @@
 
       <!-- ── LEFT: RECENTLY CONFIRMED ── -->
       <div>
-        <div class="section-rule"><h2>Recent Graded Submissions</h2></div>
-        <p style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);letter-spacing:0.07em;margin:0 0 0.85rem;border:1px solid var(--rule);background:rgba(139,105,20,0.06);padding:0.3rem 0.65rem;display:inline-block;">↓ Click any row to view submission details &amp; scans</p>
+        <div class="section-rule" style="margin-bottom:0.5rem;"><h2>Recent Graded Submissions</h2></div>
+        <p style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);letter-spacing:0.07em;margin:0 0 0.5rem;border:1px solid var(--rule);background:rgba(139,105,20,0.06);padding:0.3rem 0.65rem;display:inline-block;">↓ Click any row to view submission details &amp; scans</p>
         <div class="confirmed-feed" id="confirmed-feed"></div>
         <button class="recent-load-more" onclick="loadMoreConfirmed()">Load earlier confirmations →</button>
       </div>
 
       <!-- ── RIGHT: ATTESTED ── -->
       <div>
-        <div class="section-rule"><h2>Recent Raw Submissions</h2></div>
-        <p style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);letter-spacing:0.07em;margin:0 0 0.85rem;border:1px solid var(--rule);background:rgba(139,105,20,0.06);padding:0.3rem 0.65rem;display:inline-block;">↓ Click any row to view submission details &amp; scans</p>
+        <div class="section-rule" style="margin-bottom:0.5rem;"><h2>Recent Raw Submissions</h2></div>
+        <p style="font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-secondary);letter-spacing:0.07em;margin:0 0 0.5rem;border:1px solid var(--rule);background:rgba(139,105,20,0.06);padding:0.3rem 0.65rem;display:inline-block;">↓ Click any row to view submission details &amp; scans</p>
         <div class="attested-list" id="attested-list"></div>
         <button class="recent-load-more" onclick="loadMoreAttested()">Load more attested →</button>
       </div>
@@ -8374,11 +8374,6 @@ async function initRawSeriesProgress() {
   const grandRaw   = BACKS.reduce((s, b) => s + (rawByBack[b]   || 0), 0);
   const grandTotal = BACKS.reduce((s, b) => s + (totalByBack[b] || 0), 0);
 
-  // Summary line
-  const summaryEl = document.createElement('p');
-  summaryEl.style.cssText = "font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.05em;margin-bottom:0.9rem;";
-  summaryEl.textContent = `${grandTotal.toLocaleString()} superset · ${grandRaw.toLocaleString()} raw finest elected`;
-
   const table = document.createElement('table');
   table.className = 'progress-table raw-mode';
   table.innerHTML = `
@@ -8456,7 +8451,6 @@ async function initRawSeriesProgress() {
   tbody.appendChild(totalRow);
 
   wrap.innerHTML = '';
-  wrap.appendChild(summaryEl);
   wrap.appendChild(table);
 }
 
@@ -8529,10 +8523,6 @@ async function initRawLeagueProgress() {
 
   const grandRaw   = Object.values(rawByTeam).reduce((s, v) => s + v, 0);
   const grandTotal = Object.values(totalByTeam).reduce((s, v) => s + v, 0);
-
-  const summaryEl = document.createElement('p');
-  summaryEl.style.cssText = "font-family:'Courier Prime',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.05em;margin-bottom:0.9rem;";
-  summaryEl.textContent = `${grandTotal.toLocaleString()} superset · ${grandRaw.toLocaleString()} raw finest elected`;
 
   const table = document.createElement('table');
   table.className = 'progress-table raw-mode';
@@ -8624,7 +8614,6 @@ async function initRawLeagueProgress() {
   tbody.appendChild(totalRow);
 
   wrap.innerHTML = '';
-  wrap.appendChild(summaryEl);
   wrap.appendChild(table);
 }
 
