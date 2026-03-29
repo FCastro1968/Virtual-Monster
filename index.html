@@ -688,11 +688,14 @@
 
   .finest-label {
     font-family: 'Courier Prime', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--gold);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.65rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(201,146,42,0.3);
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -700,7 +703,7 @@
 
   .finest-label::before {
     content: '★';
-    font-size: 0.7rem;
+    font-size: 0.8rem;
   }
 
   .card-placeholder {
@@ -829,13 +832,14 @@
 
   .sub-title {
     font-family: 'Courier Prime', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--text-secondary);
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--rule);
+    border-bottom: 2px solid var(--rule);
   }
 
   .submission-row {
@@ -4117,7 +4121,7 @@
       <div id="finest-panels-col">
       <!-- Graded Finest panel (shown in graded context or default) -->
       <div class="finest-panel" id="detail-graded-panel">
-        <p class="finest-label">Finest Known</p>
+        <p class="finest-label">Graded Finest</p>
         <div class="card-placeholder">
           <div class="card-placeholder-inner">
             <div class="card-placeholder-name" id="detail-card-name">TY COBB</div>
@@ -4138,7 +4142,7 @@
       </div>
       <!-- Raw Finest panel (shown in raw context, or alongside graded when both exist) -->
       <div class="finest-panel" id="detail-raw-panel" style="display:none;">
-        <p class="finest-label" id="raw-finest-label" style="color:var(--text-secondary);">Raw Finest</p>
+        <p class="finest-label" id="raw-finest-label" style="color:var(--text-secondary);">Raw Finest Known</p>
         <div class="card-placeholder" id="raw-card-placeholder">
           <div class="card-placeholder-inner">
             <div class="card-placeholder-name" id="raw-detail-card-name">TY COBB</div>
@@ -4158,10 +4162,10 @@
       </div><!-- /finest-panels-col -->
       <!-- Submissions panel -->
       <div class="submissions-panel">
-        <p class="sub-title" id="detail-graded-subs-title">All Submissions — <span id="detail-back-label">Piedmont 150</span></p>
+        <p class="sub-title" id="detail-graded-subs-title">Graded Submissions — <span id="detail-back-label">Piedmont 150</span></p>
         <div id="submissions-list"></div>
         <div id="raw-submissions-section" style="margin-top:1rem;">
-          <p class="sub-title" id="detail-raw-subs-title" style="color:var(--text-secondary);opacity:0.7;">Raw Submissions</p>
+          <p class="sub-title" id="detail-raw-subs-title">Raw Submissions</p>
           <div id="raw-submissions-list"></div>
         </div>
         <div class="submit-cta" onclick="closeDetailBtn(); showSection('submit', document.querySelectorAll('.nav-btn')[2])">
