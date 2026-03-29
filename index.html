@@ -4822,7 +4822,7 @@ function toggleFlagForm(formId) {
 
 async function submitFlag(submissionId, player, back) {
   if (!currentUser) return;
-  const formEl = document.getElementById('flag-' + submissionId);
+  const formEl = document.getElementById('flag-' + submissionId) || document.getElementById('flag-raw-' + submissionId);
   if (!formEl) return;
   const textarea = formEl.querySelector('textarea');
   const statusEl = document.getElementById('flag-status-' + submissionId);
