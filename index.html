@@ -5686,12 +5686,12 @@ function _renderDetailPanel(c) {
   const rawSubs = (SUBMISSIONS[c.player+'|'+c.back] || []).filter(s => s.raw);
   if (rawSubs.length > 0) {
     rawList.innerHTML = '';
-    // In raw context, load current user's vote for this combo first, then render
-    if (_detailContext === 'raw') {
+    // Load vote UI in both raw context and default context (now that raw panel shows in both)
+    if (_detailContext === 'raw' || _detailContext !== 'graded') {
       _renderRawSubsList(rawList, rawSubs, c, null, null);    // render immediately (counts load async)
       _loadAndApplyUserRawVote(rawList, rawSubs, c);          // async: fetch counts + user vote, re-render
     } else {
-      _renderRawSubsList(rawList, rawSubs, c, null, null);    // no vote UI outside raw context
+      _renderRawSubsList(rawList, rawSubs, c, null, null);    // graded-only context: no vote UI
     }
   } else {
     rawList.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.65rem;color:var(--text-muted);padding:0.5rem 0;font-style:italic;">No raw submissions for this combination.</p>';
