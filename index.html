@@ -664,9 +664,26 @@
     max-height: calc(88vh - 80px);
   }
 
+  #finest-panels-col {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: calc(88vh - 80px);
+    border-right: 1px solid var(--rule);
+  }
+
   .finest-panel {
     padding: 1rem 1.5rem;
-    border-right: 1px solid var(--rule);
+  }
+
+  /* When raw panel is stacked below graded in default context */
+  #detail-graded-panel + #detail-raw-panel {
+    border-top: 1px solid var(--rule);
+  }
+
+  /* Compact card placeholder for secondary (raw) panel when stacked */
+  #detail-raw-panel.stacked .card-placeholder {
+    aspect-ratio: 5/3;
   }
 
   .finest-label {
@@ -2906,7 +2923,7 @@
   @media (max-width: 900px) {
     .two-col { grid-template-columns: 1fr; }
     .detail-body { grid-template-columns: 1fr; }
-    .finest-panel { border-right: none; border-bottom: 1px solid var(--rule); }
+    #finest-panels-col { border-right: none; border-bottom: 1px solid var(--rule); max-height: none; }
     header, .container, footer { padding-left: 1.25rem; padding-right: 1.25rem; }
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: span 1; }
@@ -2937,7 +2954,7 @@
 
     /* Detail panel */
     .detail-body { grid-template-columns: 1fr; }
-    .finest-panel { border-right: none; border-bottom: 1px solid var(--rule); }
+    #finest-panels-col { border-right: none; border-bottom: 1px solid var(--rule); max-height: none; }
 
     /* Header/container padding */
     header, .container, footer { padding-left: 1rem; padding-right: 1rem; }
@@ -4096,6 +4113,8 @@
       <button class="close-btn" onclick="closeDetailBtn()">✕ Close</button>
     </div>
     <div class="detail-body">
+      <!-- Left col: Graded Finest + Raw Finest panels -->
+      <div id="finest-panels-col">
       <!-- Graded Finest panel (shown in graded context or default) -->
       <div class="finest-panel" id="detail-graded-panel">
         <p class="finest-label">Finest Known</p>
@@ -4117,10 +4136,10 @@
           <div class="meta-item"><label>Documented By</label><value id="detail-collector">—</value></div>
         </div>
       </div>
-      <!-- Raw Finest panel (shown only in raw context) -->
+      <!-- Raw Finest panel (shown in raw context, or alongside graded when both exist) -->
       <div class="finest-panel" id="detail-raw-panel" style="display:none;">
-        <p class="finest-label" style="color:var(--text-secondary);">Raw Finest</p>
-        <div class="card-placeholder">
+        <p class="finest-label" id="raw-finest-label" style="color:var(--text-secondary);">Raw Finest</p>
+        <div class="card-placeholder" id="raw-card-placeholder">
           <div class="card-placeholder-inner">
             <div class="card-placeholder-name" id="raw-detail-card-name">TY COBB</div>
             <div class="card-placeholder-team" id="raw-detail-card-team">DETROIT · A.L.</div>
@@ -4136,6 +4155,7 @@
           <div class="meta-item"><label>Community Votes</label><value id="raw-detail-votes">—</value></div>
         </div>
       </div>
+      </div><!-- /finest-panels-col -->
       <!-- Submissions panel -->
       <div class="submissions-panel">
         <p class="sub-title" id="detail-graded-subs-title">All Submissions — <span id="detail-back-label">Piedmont 150</span></p>
@@ -5557,8 +5577,21 @@ function _renderDetailPanel(c) {
     if (rawSection)      rawSection.style.display      = 'none';
   } else {
     // Default (checklist / feed): show graded panel + both submission lists
+    // Also show raw finest panel stacked below graded if raw subs exist
+    const hasRawSubs = (SUBMISSIONS[c.player+'|'+c.back] || []).some(s => s.raw);
     if (gradedPanel)     gradedPanel.style.display     = '';
-    if (rawPanel)        rawPanel.style.display        = 'none';
+    if (rawPanel) {
+      rawPanel.style.display = hasRawSubs ? '' : 'none';
+      if (hasRawSubs) {
+        rawPanel.classList.add('stacked');
+        // Style raw label more modestly when stacked alongside graded
+        const rawLabel = document.getElementById('raw-finest-label');
+        if (rawLabel) { rawLabel.style.color = 'var(--text-secondary)'; rawLabel.style.fontSize = '0.58rem'; }
+        _renderRawFinestPanel(c);
+      } else {
+        rawPanel.classList.remove('stacked');
+      }
+    }
     if (gradedSubsTitle) gradedSubsTitle.style.display = '';
     if (rawSection)      rawSection.style.display      = '';
     if (rawSubsTitle)    rawSubsTitle.style.display    = '';
