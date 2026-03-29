@@ -6477,6 +6477,35 @@ function showVerifyNotFound(company, cert) {
 // ── NAV ──
 
 
+// ── SCAN WARNING MODAL HELPERS ───────────────────────────────────────────────
+let _pendingScanlessSubmit = null; // 'signed' | 'guest'
+
+function showScanWarning() {
+  const overlay = document.getElementById('scan-warning-overlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeScanWarning() {
+  const overlay = document.getElementById('scan-warning-overlay');
+  overlay.style.display = 'none';
+  document.body.style.overflow = '';
+  _pendingScanlessSubmit = null;
+  // Scroll scan upload zone into view so user can add scans
+  const zone = document.getElementById('scan-upload-zone');
+  if (zone) zone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function confirmSubmitWithoutScans() {
+  const overlay = document.getElementById('scan-warning-overlay');
+  overlay.style.display = 'none';
+  document.body.style.overflow = '';
+  const pending = _pendingScanlessSubmit;
+  _pendingScanlessSubmit = null;
+  if (pending === 'guest') submitCardAsGuest(true);
+  else if (pending === 'signed') submitCard(true);
+}
+
 populatePlayerDropdown();
 
 // ── RECENT CONFIRMED DATA ──
@@ -7407,7 +7436,7 @@ function checkGuestFormReady() {
 }
 
 // ── SUBMIT CARD AS GUEST ─────────────────────────────────────────────────────
-async function submitCardAsGuest() {
+async function submitCardAsGuest(bypassScanCheck) {
   const handle = (document.getElementById('guest-handle-input')?.value || '').trim();
   if (!handle) { alert('Please enter a name or handle before submitting.'); return; }
 
@@ -7419,6 +7448,13 @@ async function submitCardAsGuest() {
 
   if (!player || !back) {
     alert('Please confirm the player name and back brand before submitting.');
+    return;
+  }
+
+  // Warn if fewer than 2 scans attached
+  if (!bypassScanCheck && pendingScans.length < 2) {
+    _pendingScanlessSubmit = 'guest';
+    showScanWarning();
     return;
   }
 
@@ -7626,7 +7662,7 @@ function resetGuestSubmitForm() {
 }
 
 // ── SUBMIT CARD (AUTHENTICATED) ───────────────────────────────────────────────
-async function submitCard() {
+async function submitCard(bypassScanCheck) {
   if (!currentUser) { alert('Please sign in to submit.'); return; }
 
   const player   = document.getElementById('player-select').value;
@@ -7637,6 +7673,13 @@ async function submitCard() {
 
   if (!player || !back) {
     alert('Please confirm the player name and back brand before submitting.');
+    return;
+  }
+
+  // Warn if fewer than 2 scans attached
+  if (!bypassScanCheck && pendingScans.length < 2) {
+    _pendingScanlessSubmit = 'signed';
+    showScanWarning();
     return;
   }
 
@@ -9312,6 +9355,19 @@ async function checkHandleSetup(user) {
   }
 }
 </script>
+
+<!-- ── SCAN WARNING MODAL ── -->
+<div id="scan-warning-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,18,8,0.55);z-index:9100;align-items:center;justify-content:center;">
+  <div style="background:var(--cream);border:2px solid var(--rule);max-width:420px;width:90%;padding:2rem;position:relative;font-family:'Libre Baskerville',Georgia,serif;">
+    <div style="font-family:'Courier Prime',monospace;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.75rem;">Scans Recommended</div>
+    <p style="font-size:0.92rem;line-height:1.6;color:var(--text-primary);margin-bottom:0.5rem;"><strong>Front and back scans are strongly recommended</strong> with every submission.</p>
+    <p style="font-size:0.82rem;line-height:1.55;color:var(--text-muted);margin-bottom:1.5rem;">Scans are the evidentiary backbone of the archive. Submissions without them are harder to review and carry less weight in the record. You can add scans now — or proceed without them if needed.</p>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+      <button onclick="closeScanWarning()" style="flex:1;font-family:'Courier Prime',monospace;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;background:var(--ink);color:var(--cream);border:none;padding:0.6rem 1rem;cursor:pointer;">← Add Scans</button>
+      <button onclick="confirmSubmitWithoutScans()" style="flex:1;font-family:'Courier Prime',monospace;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;background:transparent;color:var(--text-secondary);border:1px solid var(--rule);padding:0.6rem 1rem;cursor:pointer;">Submit Anyway</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── SCAN MAGNIFIER ── -->
 <div id="scan-magnifier"></div>
