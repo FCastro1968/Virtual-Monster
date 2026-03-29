@@ -5716,7 +5716,7 @@ function closeDetailBtn() {
 // votedSubId: string | null (the submission_id this user voted for, null = none/unknown)
 function _renderRawSubsList(rawList, rawSubs, c, voteCounts, votedSubId) {
   rawList.innerHTML = '';
-  const inRawContext = _detailContext === 'raw';
+  const inRawContext = _detailContext === 'raw' || _detailContext !== 'graded';
 
   rawSubs.forEach((s, i) => {
     const hasScans = s.imgs && s.imgs.length > 0;
