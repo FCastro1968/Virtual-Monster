@@ -5717,12 +5717,22 @@ function _renderRawSubsList(rawList, rawSubs, c, voteCounts, votedSubId) {
       ${hasScans ? `<span style="font-family:'Courier Prime',monospace;font-size:0.58rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.15rem 0.45rem;border:1px solid var(--rule);color:var(--text-secondary);background:var(--parchment);white-space:nowrap;">⊕ Scans</span>` : ''}
       ${countBadge}
       ${voteBtn}
+      ${currentUser ? `<button class="flag-link" onclick="event.stopPropagation();toggleFlagForm('flag-raw-${s._submissionId}')" title="Report a problem with this submission">&#x2691; Flag Issue</button>` : ''}
     `;
 
     row.addEventListener('mouseenter', () => row.style.background = 'rgba(139,105,20,0.08)');
     row.addEventListener('mouseleave', () => row.style.background = '');
     row.addEventListener('click', () => openSubmissionInModal(c.player, c.back, s, i === 0));
     rawList.appendChild(row);
+    if (currentUser) {
+      const flagWrap = document.createElement('div');
+      const fid = 'flag-raw-' + s._submissionId;
+      const flagBtn = rawList.querySelector('#raw-sub-row-' + s._submissionId + ' .flag-link');
+      flagWrap.innerHTML = '<div class="flag-form" id="' + fid + '"><textarea placeholder="Describe the issue (wrong back, incorrect player, duplicate, etc.)…" rows="2"></textarea><div class="flag-form-actions"><button class="flag-submit-btn">Submit Flag →</button><button class="flag-cancel-btn">Cancel</button><span class="flag-status" id="flag-status-' + s._submissionId + '"></span></div></div>';
+      flagWrap.querySelector('.flag-submit-btn').addEventListener('click', () => submitFlag(s._submissionId, c.player, c.back));
+      flagWrap.querySelector('.flag-cancel-btn').addEventListener('click', () => toggleFlagForm(fid));
+      rawList.appendChild(flagWrap);
+    }
 
     // Wire vote button (stopPropagation so it doesn't open scan modal)
     if (inRawContext && currentUser && !isVoted) {
