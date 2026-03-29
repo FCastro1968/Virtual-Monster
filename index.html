@@ -6557,9 +6557,27 @@ let confirmedShowing = 8;
 let attestedShowing  = 5;
 
 function daysAgoToDisplay(n) {
+  // Legacy: reconstruct approximate date for the date-column display
   const now = new Date();
   const d   = new Date(now - n * 86400000);
   return { day: d.getDate(), mon: d.toLocaleString('en-US', { month: 'short' }).toUpperCase() };
+}
+
+function timeAgo(isoOrMs) {
+  const now  = Date.now();
+  const then = typeof isoOrMs === 'number' ? isoOrMs : new Date(isoOrMs).getTime();
+  const diffMs = now - then;
+  const mins  = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMs / 3600000);
+  const days  = Math.floor(diffMs / 86400000);
+  if (mins  <  2)  return 'Just now';
+  if (mins  < 60)  return mins + ' min ago';
+  if (hours <  2)  return '1 hour ago';
+  if (hours < 24)  return hours + ' hours ago';
+  if (days  <  2)  return 'Yesterday';
+  if (days  <  7)  return days + ' days ago';
+  const d = new Date(then);
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // Opens the full detail panel from a Recent/Attested card.
@@ -6587,7 +6605,9 @@ function renderConfirmedFeed(count) {
   const sorted = [...RECENT_CONFIRMED].sort((a, b) => a.daysAgo - b.daysAgo);
   const slice = sorted.slice(0, count);
   slice.forEach((c, i) => {
-    const { day, mon } = daysAgoToDisplay(c.daysAgo);
+    const _d = new Date(c.submittedAt || (Date.now() - c.daysAgo * 86400000));
+    const day = _d.getDate();
+    const mon = _d.toLocaleString("en-US", { month: "short" }).toUpperCase();
     const idx = sorted.indexOf(c);
     // Store sorted array on window so openConfirmedModal can access it
     window._sortedConfirmed = sorted;
@@ -6596,7 +6616,7 @@ function renderConfirmedFeed(count) {
     entry.style.cursor = 'pointer';
     entry.onclick = () => openSubmissionInModal(c.player, c.back, {
       g: c.grade, gr: c.grader, ct: c.cert, cl: c.submitter,
-      imgs: c.imgs || [], raw: false, dt: c.daysAgo === 0 ? 'Today' : c.daysAgo === 1 ? 'Yesterday' : c.daysAgo + ' days ago'
+      imgs: c.imgs || [], raw: false, dt: timeAgo(c.submittedAt || 0)
     }, false);
     entry.innerHTML = `
       <div class="conf-date-col">
@@ -6606,7 +6626,7 @@ function renderConfirmedFeed(count) {
       <div class="conf-body">
         <div class="conf-player">${c.player}</div>
         <div class="conf-back">${c.back}</div>
-        <div class="conf-submitter">Submitted by <strong>${escapeHtml(c.submitter || '')}</strong> · ${c.daysAgo === 1 ? 'Yesterday' : c.daysAgo + ' days ago'}</div>
+        <div class="conf-submitter">Submitted by <strong>${escapeHtml(c.submitter || '')}</strong> · ${timeAgo(c.submittedAt || 0)}</div>
       </div>
       <div class="conf-grade-col">
         ${c.isNew ? '<span class="conf-new-badge">New Combo</span>' : ''}
@@ -6641,7 +6661,7 @@ function renderAttestedList(count) {
     card.onclick = () => openSubmissionInModal(c.player, c.back, {
       g: null, gr: null, ct: null, cl: c.submitter,
       imgs: c.imgs || [], raw: true, notes: c.notes || '',
-      dt: c.daysAgo === 0 ? 'Today' : c.daysAgo === 1 ? 'Yesterday' : c.daysAgo + ' days ago'
+      dt: timeAgo(c.submittedAt || 0)
     }, false);
     card.innerHTML = `
       <div class="attested-card-header">
@@ -6652,7 +6672,7 @@ function renderAttestedList(count) {
         <span class="attested-status-tag">Attested · Raw</span>
       </div>
       <div class="attested-meta">
-        <span class="attested-submitter">Submitted by <strong>${escapeHtml(c.submitter || '')}</strong> · ${c.daysAgo} days ago</span>
+        <span class="attested-submitter">Submitted by <strong>${escapeHtml(c.submitter || '')}</strong> · ${timeAgo(c.submittedAt || 0)}</span>
         <button class="attested-scans-link" onclick="event.stopPropagation();openScanModal('${c.id}')">${c.scans} scan${c.scans !== 1 ? 's' : ''} on file — view &amp; review</button>
       </div>
       ${c.notes ? `<div class="attested-notes">"${escapeHtml(c.notes)}"</div>` : ''}
@@ -6828,6 +6848,7 @@ async function loadRecentConfirmedFromSupabase() {
         cert:      s.cert_number || '—',
         submitter: submitterHandle(s),
         daysAgo,
+        submittedAt: new Date(s.submitted_at).getTime(),
         isNew:     s.combinations?.is_new_discovery || false,
         _submissionId: s.id,
         imgs,
@@ -6885,6 +6906,7 @@ async function loadAttestedFromSupabase() {
         back:      s.combinations?.backs?.name   || '—',
         submitter: submitterHandle(s),
         daysAgo:   Math.floor((now - new Date(s.submitted_at)) / 86400000),
+        submittedAt: new Date(s.submitted_at).getTime(),
         votes:     0,
         userVote:  0,
         notes:     s.raw_notes || '',
@@ -7122,12 +7144,28 @@ async function loadForumThreads() {
       .from('forum_threads')
       .select(`
         id, subject, is_pinned, is_locked, reply_count, created_at, updated_at,
+        author_id,
         author:users!author_id ( handle )
       `)
       .order('is_pinned', { ascending: false })
       .order('updated_at',  { ascending: false });
     if (error) throw error;
-    FORUM_THREAD_CACHE = data || [];
+    const threads = data || [];
+
+    // If author join failed, do a batch handle lookup by author_id
+    const missingAuthorThreads = threads.filter(t => !t.author?.handle && t.author_id);
+    if (missingAuthorThreads.length > 0) {
+      const ids = [...new Set(missingAuthorThreads.map(t => t.author_id))];
+      const { data: userRows } = await db.from('users').select('id, handle').in('id', ids);
+      const handleMap = Object.fromEntries((userRows || []).map(u => [u.id, u.handle]));
+      threads.forEach(t => {
+        if (!t.author?.handle && t.author_id && handleMap[t.author_id]) {
+          t.author = { handle: handleMap[t.author_id] };
+        }
+      });
+    }
+
+    FORUM_THREAD_CACHE = threads;
 
     // Sort: pinned threads in a fixed order (Welcome → Suggestions → Bugs), then unpinned by updated_at desc
     const pinnedOrder = (subject) => {
@@ -7152,13 +7190,27 @@ async function loadThreadPosts(threadId) {
   const { data, error } = await db
     .from('forum_posts')
     .select(`
-      id, body, like_count, is_op, created_at,
+      id, body, like_count, is_op, created_at, author_id,
       author:users!author_id ( handle )
     `)
     .eq('thread_id', threadId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return data || [];
+
+  // If the join resolved handles, use them; otherwise do a batch lookup by author_id
+  const posts = data || [];
+  const missingHandles = posts.filter(p => !p.author?.handle && p.author_id);
+  if (missingHandles.length > 0) {
+    const ids = [...new Set(missingHandles.map(p => p.author_id))];
+    const { data: userRows } = await db.from('users').select('id, handle').in('id', ids);
+    const handleMap = Object.fromEntries((userRows || []).map(u => [u.id, u.handle]));
+    posts.forEach(p => {
+      if (!p.author?.handle && p.author_id && handleMap[p.author_id]) {
+        p.author = { handle: handleMap[p.author_id] };
+      }
+    });
+  }
+  return posts;
 }
 
 // ── RENDER THREAD LIST ────────────────────────────────────────
