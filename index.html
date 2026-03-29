@@ -6594,7 +6594,10 @@ function renderConfirmedFeed(count) {
     const entry = document.createElement('div');
     entry.className = 'confirmed-entry';
     entry.style.cursor = 'pointer';
-    entry.onclick = () => openDetailFromFeed(c.player, c.back);
+    entry.onclick = () => openSubmissionInModal(c.player, c.back, {
+      g: c.grade, gr: c.grader, ct: c.cert, cl: c.submitter,
+      imgs: c.imgs || [], raw: false, dt: c.daysAgo === 0 ? 'Today' : c.daysAgo === 1 ? 'Yesterday' : c.daysAgo + ' days ago'
+    }, false);
     entry.innerHTML = `
       <div class="conf-date-col">
         <span class="conf-day">${day}</span>
@@ -6635,7 +6638,11 @@ function renderAttestedList(count) {
     card.className = 'attested-card';
     card.id = 'attested-' + c.id;
     card.style.cursor = 'pointer';
-    card.onclick = () => openDetailFromFeed(c.player, c.back);
+    card.onclick = () => openSubmissionInModal(c.player, c.back, {
+      g: null, gr: null, ct: null, cl: c.submitter,
+      imgs: c.imgs || [], raw: true, notes: c.notes || '',
+      dt: c.daysAgo === 0 ? 'Today' : c.daysAgo === 1 ? 'Yesterday' : c.daysAgo + ' days ago'
+    }, false);
     card.innerHTML = `
       <div class="attested-card-header">
         <div>
@@ -6811,6 +6818,8 @@ async function loadRecentConfirmedFromSupabase() {
 
     const converted = data.map(s => {
       const daysAgo = Math.floor((now - new Date(s.submitted_at)) / 86400000);
+      const sortedScans = (s.scans || []).sort((a, b) => a.sort_order - b.sort_order);
+      const imgs = sortedScans.map(sc => SUPABASE_URL + '/storage/v1/object/public/scans/' + sc.storage_path);
       return {
         player:    s.combinations?.players?.name || '—',
         back:      s.combinations?.backs?.name   || '—',
@@ -6821,6 +6830,7 @@ async function loadRecentConfirmedFromSupabase() {
         daysAgo,
         isNew:     s.combinations?.is_new_discovery || false,
         _submissionId: s.id,
+        imgs,
       };
     });
 
@@ -6866,18 +6876,23 @@ async function loadAttestedFromSupabase() {
     const SUPABASE_URL = 'https://visrbvpidnhbvpjsoxtf.supabase.co';
     const now = Date.now();
 
-    const converted = data.map(s => ({
-      id:        'db_' + s.id,
-      player:    s.combinations?.players?.name || '—',
-      back:      s.combinations?.backs?.name   || '—',
-      submitter: submitterHandle(s),
-      daysAgo:   Math.floor((now - new Date(s.submitted_at)) / 86400000),
-      votes:     0,      // legitimacy votes retired; raw_votes (Session 5) replaces
-      userVote:  0,
-      notes:     s.raw_notes || '',
-      scans:     s.scans?.length || 0,
-      _submissionId: s.id,
-    }));
+    const converted = data.map(s => {
+      const sortedScans = (s.scans || []).sort((a, b) => a.sort_order - b.sort_order);
+      const imgs = sortedScans.map(sc => SUPABASE_URL + '/storage/v1/object/public/scans/' + sc.storage_path);
+      return {
+        id:        'db_' + s.id,
+        player:    s.combinations?.players?.name || '—',
+        back:      s.combinations?.backs?.name   || '—',
+        submitter: submitterHandle(s),
+        daysAgo:   Math.floor((now - new Date(s.submitted_at)) / 86400000),
+        votes:     0,
+        userVote:  0,
+        notes:     s.raw_notes || '',
+        scans:     s.scans?.length || 0,
+        _submissionId: s.id,
+        imgs,
+      };
+    });
 
     // Replace hardcoded array in-place
     ATTESTED_COMBOS.length = 0;
