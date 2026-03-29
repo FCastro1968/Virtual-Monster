@@ -3984,13 +3984,13 @@
   <div id="section-admin" class="admin-section">
     <div class="container" style="max-width:1100px;">
 
-      <div class="section-rule" style="margin-bottom:2rem;"><h2>Admin — Review Queue</h2></div>
+      <div class="section-rule" style="margin-bottom:1.5rem;"><h2>Admin — Review Queue</h2></div>
 
       <!-- ── PENDING SGC SUBMISSIONS ── -->
       <div style="margin-bottom:3rem;">
-        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:0.5rem;padding-bottom:0.6rem;border-bottom:2px solid var(--rule);display:flex;align-items:center;gap:0.75rem;">
           Pending SGC Manual Verification
-          <span id="admin-pending-count" style="margin-left:1rem;background:var(--rust);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
+          <span id="admin-pending-count" style="background:var(--rust);color:var(--cream);padding:0.15rem 0.55rem;font-family:'Courier Prime',monospace;font-size:0.65rem;font-weight:400;letter-spacing:0.05em;">0</span>
         </div>
         <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem;line-height:1.6;">
           These submissions used an SGC cert number that could not be automatically verified. Review each cert on the SGC registry, then confirm or reject below.
@@ -4000,25 +4000,11 @@
         </div>
       </div>
 
-      <!-- ── FLAGGED ATTESTED SUBMISSIONS ── -->
-      <div style="margin-bottom:3rem;">
-        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
-          Flagged Attested Submissions (net score ≤ −3)
-          <span id="admin-flagged-count" style="margin-left:1rem;background:var(--sepia);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
-        </div>
-        <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem;line-height:1.6;">
-          Attested (raw) submissions that the community has disputed. Review scans and either retain or remove from the archive.
-        </p>
-        <div id="admin-flagged-list">
-          <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
-        </div>
-      </div>
-
       <!-- ── USER-FLAGGED SUBMISSION ISSUES ── -->
-      <div>
-        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
+      <div style="margin-bottom:3rem;">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:0.5rem;padding-bottom:0.6rem;border-bottom:2px solid var(--rule);display:flex;align-items:center;gap:0.75rem;">
           User-Reported Submission Issues
-          <span id="admin-issues-count" style="margin-left:1rem;background:var(--rust);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
+          <span id="admin-issues-count" style="background:var(--rust);color:var(--cream);padding:0.15rem 0.55rem;font-family:'Courier Prime',monospace;font-size:0.65rem;font-weight:400;letter-spacing:0.05em;">0</span>
         </div>
         <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem;line-height:1.6;">
           Issues flagged by community members on confirmed or attested submissions — wrong back, incorrect player, duplicate cert, or other data errors.
@@ -4030,12 +4016,12 @@
 
       <!-- ── GUEST SUBMISSIONS ── -->
       <div style="margin-bottom:3rem;">
-        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:0.5rem;padding-bottom:0.6rem;border-bottom:2px solid var(--rule);display:flex;align-items:center;gap:0.75rem;">
           Guest Submissions — Pending Review
-          <span id="admin-guest-count" style="margin-left:1rem;background:var(--sepia);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
+          <span id="admin-guest-count" style="background:var(--sepia);color:var(--cream);padding:0.15rem 0.55rem;font-family:'Courier Prime',monospace;font-size:0.65rem;font-weight:400;letter-spacing:0.05em;">0</span>
         </div>
         <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem;line-height:1.6;">
-          Submissions made without a registered account. Review scans and card details, then Approve (moves to normal pending or attested flow) or Reject.
+          Submissions made without a registered account. Review scans and card details, then Approve (moves to confirmed or attested) or Reject.
         </p>
         <div id="admin-guest-list">
           <p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>
@@ -4044,9 +4030,9 @@
 
       <!-- ── ALL SUBMISSIONS — DELETE ── -->
       <div style="margin-bottom:3rem;">
-        <div style="font-family:'Courier Prime',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--rule);">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:0.5rem;padding-bottom:0.6rem;border-bottom:2px solid var(--rule);display:flex;align-items:center;gap:0.75rem;">
           All Submissions — Delete
-          <span id="admin-all-count" style="margin-left:1rem;background:var(--ink);color:var(--cream);padding:0.1rem 0.45rem;font-size:0.6rem;">0</span>
+          <span id="admin-all-count" style="background:var(--ink);color:var(--cream);padding:0.15rem 0.55rem;font-family:'Courier Prime',monospace;font-size:0.65rem;font-weight:400;letter-spacing:0.05em;">0</span>
         </div>
         <p style="font-family:'Libre Baskerville',serif;font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.6;">
           Search any confirmed, attested, or pending submission to reject and hide it from all public views.
@@ -4591,7 +4577,7 @@ async function checkAdminStatus(user) {
 }
 
 async function loadAdminQueues() {
-  await Promise.all([loadAllSubmissions(), loadPendingSubmissions(), loadFlaggedSubmissions(), loadIssueFlags(), loadGuestSubmissions()]);
+  await Promise.all([loadAllSubmissions(), loadPendingSubmissions(), loadIssueFlags(), loadGuestSubmissions()]);
 }
 
 // ── All Submissions — Delete queue ───────────────────────────────────────────
@@ -4794,91 +4780,6 @@ async function loadPendingSubmissions() {
 
   } catch (err) {
     list.innerHTML = `<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error loading pending submissions: ${err.message}</p>`;
-  }
-}
-
-// ── Flagged attested submissions ──
-async function loadFlaggedSubmissions() {
-  const list = document.getElementById('admin-flagged-list');
-  const countEl = document.getElementById('admin-flagged-count');
-  list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">Loading…</p>';
-
-  try {
-    // NOTE (Session 1): This queue was originally for attested submissions with
-    // net legitimacy vote score <= -3. Legitimacy votes have been retired.
-    // This query now returns all attested submissions — admin should decide
-    // whether to repurpose this queue or remove it in a future session.
-    const { data: subs, error } = await db
-      .from('submissions')
-      .select(`
-        id, raw_notes, submitted_at, guest_handle,
-        users!submitted_by ( handle ),
-        combinations (
-          players ( name ),
-          backs ( name )
-        )
-      `)
-      .eq('status', 'attested')
-      .order('submitted_at', { ascending: true });
-
-    if (error) throw error;
-    if (!subs || subs.length === 0) {
-      countEl.textContent = 0;
-      list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No attested submissions.</p>';
-      return;
-    }
-
-    // Get vote totals
-    const ids = subs.map(s => s.id);
-    const { data: voteTotals } = await db
-      .from('submission_vote_totals')
-      .select('submission_id, net_score')
-      .in('submission_id', ids);
-    const voteMap = {};
-    if (voteTotals) voteTotals.forEach(v => { voteMap[v.submission_id] = v.net_score; });
-
-    const flagged = subs.filter(s => (voteMap[s.id] ?? 0) <= -3);
-    countEl.textContent = flagged.length;
-
-    if (flagged.length === 0) {
-      list.innerHTML = '<p style="font-family:\'Courier Prime\',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;">No flagged submissions.</p>';
-      return;
-    }
-
-    list.innerHTML = '';
-    flagged.forEach(s => {
-      const player    = s.combinations?.players?.name || '—';
-      const back      = s.combinations?.backs?.name   || '—';
-      const submitter = submitterHandle(s);
-      const date      = s.submitted_at ? s.submitted_at.slice(0, 10) : '—';
-      const score     = voteMap[s.id] ?? 0;
-
-      const card = document.createElement('div');
-      card.className = 'admin-card';
-      card.id = 'admin-flagged-' + s.id;
-      card.innerHTML = `
-        <div class="admin-card-header">
-          <div>
-            <div class="admin-player">${player}</div>
-            <div class="admin-back">${back} · Attested Raw</div>
-          </div>
-          <span style="font-family:'Courier Prime',monospace;font-size:0.62rem;letter-spacing:0.08em;padding:0.15rem 0.5rem;border:1px solid rgba(139,58,26,0.4);color:var(--rust);background:rgba(139,58,26,0.06);">⚑ Net ${score}</span>
-        </div>
-        <div class="admin-meta-row">
-          <span>Submitted by <strong>${submitter}</strong></span>
-          <span>Date <strong>${date}</strong></span>
-          ${s.raw_notes ? `<span>Notes <strong>"${s.raw_notes.slice(0, 80)}${s.raw_notes.length > 80 ? '…' : ''}"</strong></span>` : ''}
-        </div>
-        <div class="admin-actions">
-          <button class="admin-btn admin-btn-retain" onclick="adminDecide('${s.id}', 'attested', 'flagged')">↺ Retain</button>
-          <button class="admin-btn admin-btn-remove" onclick="adminDecide('${s.id}', 'rejected', 'flagged')">✕ Remove</button>
-        </div>
-      `;
-      list.appendChild(card);
-    });
-
-  } catch (err) {
-    list.innerHTML = `<p style="font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--rust);">Error loading flagged submissions: ${err.message}</p>`;
   }
 }
 
@@ -5176,7 +5077,7 @@ async function adminDecide(submissionId, newStatus, queue) {
     // Update badge count
     const countId = queue === 'pending' ? 'admin-pending-count'
                   : queue === 'guest'   ? 'admin-guest-count'
-                  :                       'admin-flagged-count';
+                  :                       'admin-issues-count';
     const countEl = document.getElementById(countId);
     if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
 
