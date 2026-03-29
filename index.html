@@ -6446,12 +6446,18 @@ async function showVerifySuccess(d) {
       // Populate series dropdown filtered by PSA brand hint
       // e.g. PSA says "Piedmont 350" so only show Piedmont backs starting with "Piedmont 350"
       onBackBrandSelect(true, d.brand);
-      // Force placeholder selected
+      // Only reset to placeholder if user still needs to pick a series.
+      // If onBackBrandSelect already resolved to a single series, leave it and run combo check.
       const seriesSel = document.getElementById('brand-series-select');
-      if (seriesSel) seriesSel.selectedIndex = 0;
-      // Show neutral prompt
       const matchEl = document.getElementById('combo-match-msg');
-      if (matchEl) matchEl.innerHTML = `<div class="verify-checklist-hit" style="background:transparent;border-color:var(--sepia);color:var(--text-secondary);">Select the specific series above to confirm combination</div>`;
+      if (seriesSel && seriesSel.options.length > 2) {
+        // Multiple options — user must confirm; show prompt
+        seriesSel.selectedIndex = 0;
+        if (matchEl) matchEl.innerHTML = `<div class="verify-checklist-hit" style="background:transparent;border-color:var(--sepia);color:var(--text-secondary);">Select the specific series above to confirm combination</div>`;
+      } else {
+        // Single series was auto-resolved — run combo check now
+        onBrandSeriesSelect();
+      }
     }
   }
 
