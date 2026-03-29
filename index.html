@@ -4737,8 +4737,12 @@ async function deleteSubmission(submissionId, player, back) {
     if (countEl) countEl.textContent = _adminAllSubs.length;
     if (card) card.remove();
 
-    // Refresh checklist so status recalculates
-    loadChecklistFromSupabase();
+    // Refresh checklist and feeds so status change is immediately reflected
+    await Promise.all([
+      loadChecklistFromSupabase(),
+      loadRecentConfirmedFromSupabase(),
+      loadAttestedFromSupabase(),
+    ]);
 
   } catch (err) {
     if (card) card.style.opacity = '1';
@@ -4931,7 +4935,7 @@ async function loadIssueFlags() {
       </div>
       <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
         <button class="admin-btn admin-btn-confirm" onclick="resolveFlag('${flag.id}', '${cardId}')">✓ Mark Resolved</button>
-        <button class="admin-btn admin-btn-reject" onclick="adminDecide('${flag.submission_id}', 'rejected', 'flagged');resolveFlag('${flag.id}', '${cardId}')">✕ Reject Submission</button>
+        <button class="admin-btn admin-btn-reject" onclick="(async()=>{await adminDecide('${flag.submission_id}', 'rejected', 'flagged');await resolveFlag('${flag.id}', '${cardId}');})()">✕ Reject Submission</button>
       </div>`;
     list.appendChild(card);
   });
@@ -5082,7 +5086,7 @@ async function adminApproveGuest(submissionId, isRaw) {
 async function adminDecide(submissionId, newStatus, queue) {
   const cardId = `admin-${queue}-${submissionId}`;
   const card   = document.getElementById(cardId);
-  if (!card) return;
+  // Note: card may be null for flagged queue (card ID is keyed to flag, not submission) — that is ok, proceed anyway
 
   // When confirming a pending SGC cert, collect the grade
   let gradeValue = null;
@@ -5092,8 +5096,8 @@ async function adminDecide(submissionId, newStatus, queue) {
     gradeValue = gradeValue.trim() || null;
   }
 
-  // Disable buttons immediately
-  card.querySelectorAll('.admin-btn').forEach(b => { b.disabled = true; });
+  // Disable buttons immediately if card is in DOM
+  if (card) card.querySelectorAll('.admin-btn').forEach(b => { b.disabled = true; });
 
   try {
     const updatePayload = { status: newStatus, updated_at: new Date().toISOString() };
@@ -5118,25 +5122,31 @@ async function adminDecide(submissionId, newStatus, queue) {
     if (error) throw error;
 
     // Replace action buttons with result tag
-    const actionsEl = card.querySelector('.admin-actions');
+    const actionsEl = card ? card.querySelector('.admin-actions') : null;
     const labels = { confirmed: 'Confirmed', rejected: 'Rejected', attested: 'Retained', removed: 'Removed' };
     const classes = { confirmed: 'admin-result-confirmed', rejected: 'admin-result-rejected', attested: 'admin-result-retained' };
     const tagClass = classes[newStatus] || 'admin-result-removed';
     const tagLabel = labels[newStatus] || newStatus;
-    actionsEl.innerHTML = `<span class="admin-result-tag ${tagClass}">✓ ${tagLabel}</span>`;
+    if (actionsEl) actionsEl.innerHTML = `<span class="admin-result-tag ${tagClass}">✓ ${tagLabel}</span>`;
 
     // Update badge count
     const countId = queue === 'pending' ? 'admin-pending-count'
                   : queue === 'guest'   ? 'admin-guest-count'
                   :                       'admin-issues-count';
     const countEl = document.getElementById(countId);
-    if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
+    if (countEl && queue !== 'flagged') countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
 
-    // Refresh checklist and recent feed so confirmed/attested cards appear immediately
+    // Refresh checklist and feeds to reflect the status change
     if (newStatus === 'confirmed' || newStatus === 'attested') {
       await Promise.all([
         loadChecklistFromSupabase(),
         loadRecentConfirmedFromSupabase(),
+      ]);
+    } else if (newStatus === 'rejected' || newStatus === 'removed') {
+      await Promise.all([
+        loadChecklistFromSupabase(),
+        loadRecentConfirmedFromSupabase(),
+        loadAttestedFromSupabase(),
       ]);
     }
 
