@@ -6035,11 +6035,11 @@ function onBackBrandSelect(skipComboCheck, brandHint) {
     if (filtered.length > 0) variants = filtered;
   }
   if (variants.length === 1) {
-    seriesGroup.style.display = 'none';
     const opt = document.createElement('option');
     opt.value = opt.textContent = variants[0];
     seriesSel.appendChild(opt);
     seriesSel.value = variants[0];
+    seriesGroup.style.display = '';
   } else {
     variants.forEach(v => {
       const opt = document.createElement('option');
