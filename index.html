@@ -6841,14 +6841,14 @@ async function loadContributors(period) {
     // ── Cards submitted (confirmed, in period) ───────────────
     let cardsQuery = db
       .from('submissions')
-      .select('submitted_by, submitter:users!submitted_by ( handle )', { count: 'exact' })
+      .select('submitted_by, guest_handle, submitter:users!submitted_by ( handle )', { count: 'exact' })
       .eq('status', 'confirmed');
     if (cutoff) cardsQuery = cardsQuery.gte('submitted_at', cutoff);
     const { data: cardRows } = await cardsQuery;
 
     const cardCounts = {};
     (cardRows || []).forEach(r => {
-      const h = r.submitter?.handle;
+      const h = r.submitter?.handle || r.guest_handle;
       if (h) cardCounts[h] = (cardCounts[h] || 0) + 1;
     });
     const cardsData = Object.entries(cardCounts)
@@ -6861,13 +6861,13 @@ async function loadContributors(period) {
     // it shows who currently holds the most finest-known slots.
     const { data: finestRows } = await db
       .from('submissions')
-      .select('submitted_by, submitter:users!submitted_by ( handle )')
+      .select('submitted_by, guest_handle, submitter:users!submitted_by ( handle )')
       .eq('is_finest_graded', true)
       .eq('status', 'confirmed');
 
     const finestCounts = {};
     (finestRows || []).forEach(r => {
-      const h = r.submitter?.handle;
+      const h = r.submitter?.handle || r.guest_handle;
       if (h) finestCounts[h] = (finestCounts[h] || 0) + 1;
     });
     const finestData = Object.entries(finestCounts)
@@ -6880,7 +6880,7 @@ async function loadContributors(period) {
     // earliest confirmed one for that player+back pair.
     let newComboQuery = db
       .from('submissions')
-      .select('player, back, submitted_by, submitted_at, submitter:users!submitted_by ( handle )')
+      .select('player, back, submitted_by, submitted_at, guest_handle, submitter:users!submitted_by ( handle )')
       .eq('status', 'confirmed')
       .order('submitted_at', { ascending: true });
     if (cutoff) newComboQuery = newComboQuery.gte('submitted_at', cutoff);
@@ -6890,7 +6890,7 @@ async function loadContributors(period) {
     // (not just in period) to determine who "discovered" it
     const { data: allFirstRows } = await db
       .from('submissions')
-      .select('player, back, submitted_by, submitted_at, submitter:users!submitted_by ( handle )')
+      .select('player, back, submitted_by, submitted_at, guest_handle, submitter:users!submitted_by ( handle )')
       .eq('status', 'confirmed')
       .order('submitted_at', { ascending: true });
 
@@ -6904,7 +6904,7 @@ async function loadContributors(period) {
     Object.values(firstByCombo).forEach(r => {
       // Only count if the first submission falls within the period
       if (cutoff && r.submitted_at < cutoff) return;
-      const h = r.submitter?.handle;
+      const h = r.submitter?.handle || r.guest_handle;
       if (h) newComboCounts[h] = (newComboCounts[h] || 0) + 1;
     });
     const newComboData = Object.entries(newComboCounts)
