@@ -6555,6 +6555,12 @@ const ATTESTED_COMBOS = [];
 
 let confirmedShowing = 8;
 let attestedShowing  = 5;
+let confirmedOffset  = 0;   // rows already fetched from DB
+let attestedOffset   = 0;
+let confirmedExhausted = false;  // true when last fetch returned < batch size
+let attestedExhausted  = false;
+const CONFIRMED_BATCH = 30;
+const ATTESTED_BATCH  = 50;
 
 function daysAgoToDisplay(n) {
   // Legacy: reconstruct approximate date for the date-column display
@@ -6638,11 +6644,19 @@ function renderConfirmedFeed(count) {
   });
 }
 
-function loadMoreConfirmed() {
-  confirmedShowing = Math.min(confirmedShowing + 5, RECENT_CONFIRMED.length);
+async function loadMoreConfirmed() {
+  confirmedShowing += 5;
+  // If we are about to show more than we have cached, fetch the next batch first
+  if (confirmedShowing > RECENT_CONFIRMED.length && !confirmedExhausted) {
+    const btn = document.querySelector('[onclick="loadMoreConfirmed()"]');
+    if (btn) btn.textContent = 'Loading…';
+    await loadRecentConfirmedFromSupabase(confirmedOffset + CONFIRMED_BATCH);
+  }
   renderConfirmedFeed(confirmedShowing);
-  if (confirmedShowing >= RECENT_CONFIRMED.length) {
-    document.querySelector('[onclick="loadMoreConfirmed()"]').style.display = 'none';
+  const btn = document.querySelector('[onclick="loadMoreConfirmed()"]');
+  if (btn) {
+    btn.textContent = 'Load earlier confirmations →';
+    btn.style.display = confirmedExhausted && confirmedShowing >= RECENT_CONFIRMED.length ? 'none' : '';
   }
 }
 
@@ -6801,16 +6815,23 @@ function closeScanModal(e) {
   scanModalComboId = null;
 }
 
-function loadMoreAttested() {
-  attestedShowing = Math.min(attestedShowing + 3, ATTESTED_COMBOS.length);
+async function loadMoreAttested() {
+  attestedShowing += 3;
+  if (attestedShowing > ATTESTED_COMBOS.length && !attestedExhausted) {
+    const btn = document.querySelector('[onclick="loadMoreAttested()"]');
+    if (btn) btn.textContent = 'Loading…';
+    await loadAttestedFromSupabase(attestedOffset + ATTESTED_BATCH);
+  }
   renderAttestedList(attestedShowing);
-  if (attestedShowing >= ATTESTED_COMBOS.length) {
-    document.querySelector('[onclick="loadMoreAttested()"]').style.display = 'none';
+  const btn = document.querySelector('[onclick="loadMoreAttested()"]');
+  if (btn) {
+    btn.textContent = 'Load more attested →';
+    btn.style.display = attestedExhausted && attestedShowing >= ATTESTED_COMBOS.length ? 'none' : '';
   }
 }
 
 // ── LOAD RECENT CONFIRMED FROM SUPABASE ──────────────────────────────────────
-async function loadRecentConfirmedFromSupabase() {
+async function loadRecentConfirmedFromSupabase(fromOffset = 0) {
   try {
     const { data, error } = await db
       .from('submissions')
@@ -6826,12 +6847,15 @@ async function loadRecentConfirmedFromSupabase() {
       `)
       .eq('status', 'confirmed')
       .order('submitted_at', { ascending: false })
-      .limit(30);
+      .range(fromOffset, fromOffset + CONFIRMED_BATCH - 1);
 
+    confirmedOffset = fromOffset;
     if (error || !data || data.length === 0) {
-      renderConfirmedFeed(confirmedShowing);
+      confirmedExhausted = true;
+      if (fromOffset === 0) renderConfirmedFeed(confirmedShowing);
       return;
     }
+    if (data.length < CONFIRMED_BATCH) confirmedExhausted = true;
 
     const SUPABASE_URL = 'https://visrbvpidnhbvpjsoxtf.supabase.co';
     const now = Date.now();
@@ -6855,10 +6879,13 @@ async function loadRecentConfirmedFromSupabase() {
       };
     });
 
-    // Replace hardcoded array contents in-place so existing sort/slice logic still works
-    RECENT_CONFIRMED.length = 0;
-    converted.forEach(c => RECENT_CONFIRMED.push(c));
-    confirmedShowing = Math.min(8, RECENT_CONFIRMED.length);
+    if (fromOffset === 0) {
+      RECENT_CONFIRMED.length = 0;
+      confirmedShowing = Math.min(8, converted.length);
+    }
+    converted.forEach(c => {
+      if (!RECENT_CONFIRMED.find(x => x._submissionId === c._submissionId)) RECENT_CONFIRMED.push(c);
+    });
     renderConfirmedFeed(confirmedShowing);
 
   } catch (err) {
@@ -6868,11 +6895,8 @@ async function loadRecentConfirmedFromSupabase() {
 }
 
 // ── LOAD ATTESTED SUBMISSIONS FROM SUPABASE ───────────────────────────────────
-async function loadAttestedFromSupabase() {
+async function loadAttestedFromSupabase(fromOffset = 0) {
   try {
-    // Fetch raw (ungraded) submissions for the Recent feed.
-    // Rawness = is_graded=false, independent of combination status.
-    // Exclude workflow-only statuses (pending/rejected/removed).
     const { data, error } = await db
       .from('submissions')
       .select(`
@@ -6887,12 +6911,15 @@ async function loadAttestedFromSupabase() {
       .eq('is_graded', false)
       .not('status', 'in', '("pending","rejected","removed")')
       .order('submitted_at', { ascending: false })
-      .limit(50);
+      .range(fromOffset, fromOffset + ATTESTED_BATCH - 1);
 
+    attestedOffset = fromOffset;
     if (error || !data || data.length === 0) {
-      renderAttestedList(attestedShowing);
+      attestedExhausted = true;
+      if (fromOffset === 0) renderAttestedList(attestedShowing);
       return;
     }
+    if (data.length < ATTESTED_BATCH) attestedExhausted = true;
 
     const SUPABASE_URL = 'https://visrbvpidnhbvpjsoxtf.supabase.co';
     const now = Date.now();
@@ -6916,11 +6943,13 @@ async function loadAttestedFromSupabase() {
       };
     });
 
-    // Replace hardcoded array in-place
-    ATTESTED_COMBOS.length = 0;
-    converted.forEach(c => ATTESTED_COMBOS.push(c));
-    attestedShowing = Math.min(5, ATTESTED_COMBOS.length);
-
+    if (fromOffset === 0) {
+      ATTESTED_COMBOS.length = 0;
+      attestedShowing = Math.min(5, converted.length);
+    }
+    converted.forEach(c => {
+      if (!ATTESTED_COMBOS.find(x => x._submissionId === c._submissionId)) ATTESTED_COMBOS.push(c);
+    });
     renderAttestedList(attestedShowing);
 
   } catch (err) {
