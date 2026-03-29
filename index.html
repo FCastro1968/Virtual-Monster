@@ -968,7 +968,7 @@
   }
   .auth-gate-col {
     flex: 1;
-    padding: 1.5rem;
+    padding: 1.25rem 1.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -981,16 +981,17 @@
   }
   .auth-gate-title {
     font-family: 'Playfair Display', serif;
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--ink);
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.3rem;
   }
   .auth-gate-sub {
     font-family: 'Courier Prime', monospace;
     font-size: 0.62rem;
     color: var(--text-secondary);
-    line-height: 1.6;
-    margin-bottom: 1.5rem;
+    line-height: 1.5;
+    margin-bottom: 0.85rem;
+    text-align: center;
   }
   .auth-btn {
     display: flex;
@@ -998,8 +999,8 @@
     justify-content: center;
     gap: 0.6rem;
     width: 100%;
-    padding: 0.7rem 1rem;
-    margin-bottom: 0.6rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.4rem;
     border: 1px solid var(--rule);
     background: var(--cream);
     font-family: 'Courier Prime', monospace;
@@ -1016,7 +1017,7 @@
     font-size: 0.58rem;
     color: var(--text-muted);
     letter-spacing: 0.1em;
-    margin: 0.5rem 0;
+    margin: 0.3rem 0;
   }
 
   /* ── SIGNED-IN IDENTITY BAR ── */
@@ -3586,7 +3587,7 @@
         <div class="auth-gate-sub">
           No account required. Your name or handle will appear in the record as credited contributor.
         </div>
-        <div style="width:100%;margin-bottom:0.9rem;">
+        <div style="width:100%;margin-bottom:0.5rem;">
           <label style="font-family:'Courier Prime',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary);display:block;margin-bottom:0.35rem;">
             Your Name or Collector Handle <span style="color:var(--rust);">*</span>
           </label>
@@ -5920,7 +5921,7 @@ function applyAuthState(user) {
     checkAdminStatus(user);
   } else {
     // Submit tab auth UI
-    document.getElementById('auth-gate').style.display          = '';
+    document.getElementById('auth-gate').style.display          = 'flex';
     document.getElementById('auth-identity-bar').style.display  = 'none';
     document.getElementById('submit-form-body').style.display   = 'none';
 
@@ -7361,7 +7362,7 @@ function showGuestSubmitForm() {
 
 function cancelGuestSubmitForm() {
   // Back to auth gate
-  document.getElementById('auth-gate').style.display              = '';
+  document.getElementById('auth-gate').style.display              = 'flex';
   document.getElementById('guest-submit-form-body').style.display = 'none';
   document.getElementById('submit-form-body').style.display       = 'none';
 
@@ -7569,7 +7570,7 @@ function resetGuestSubmitForm() {
   if (successPanel) successPanel.remove();
 
   // Show the auth gate again (back to start)
-  document.getElementById('auth-gate').style.display              = '';
+  document.getElementById('auth-gate').style.display              = 'flex';
   document.getElementById('guest-submit-form-body').style.display = 'none';
   document.getElementById('submit-form-body').style.display       = 'none';
   document.getElementById('submit-main-btn').style.display        = '';
