@@ -7033,34 +7033,27 @@ async function loadContributors(period) {
       .slice(0, 10)
       .map(([handle, count]) => ({ handle, count }));
 
-    // ── New combos (first confirmed submission per player/back, in period) ──
-    // A "new combo" is a combination where the user's submission was the
-    // earliest confirmed one for that player+back pair.
-    let newComboQuery = db
-      .from('submissions')
-      .select('player, back, submitted_by, submitted_at, guest_handle, submitter:users!submitted_by ( handle )')
-      .eq('status', 'confirmed')
-      .order('submitted_at', { ascending: true });
-    if (cutoff) newComboQuery = newComboQuery.gte('submitted_at', cutoff);
-    const { data: newComboRows } = await newComboQuery;
-
-    // For each player+back, find the earliest confirmed submission overall
-    // (not just in period) to determine who "discovered" it
+    // ── New combos (first confirmed submission per combination, in period) ──
+    // A "new combo" credit goes to whoever has the earliest confirmed submission
+    // for each combination. Uses combination_id as the key.
     const { data: allFirstRows } = await db
       .from('submissions')
-      .select('player, back, submitted_by, submitted_at, guest_handle, submitter:users!submitted_by ( handle )')
+      .select(`
+        combination_id, submitted_by, submitted_at, guest_handle,
+        submitter:users!submitted_by ( handle )
+      `)
       .eq('status', 'confirmed')
       .order('submitted_at', { ascending: true });
 
+    // For each combination, keep only the earliest confirmed submission
     const firstByCombo = {};
     (allFirstRows || []).forEach(r => {
-      const key = r.player + '|' + r.back;
-      if (!firstByCombo[key]) firstByCombo[key] = r;
+      if (!firstByCombo[r.combination_id]) firstByCombo[r.combination_id] = r;
     });
 
     const newComboCounts = {};
     Object.values(firstByCombo).forEach(r => {
-      // Only count if the first submission falls within the period
+      // Only count if the first submission falls within the selected period
       if (cutoff && r.submitted_at < cutoff) return;
       const h = r.submitter?.handle || r.guest_handle;
       if (h) newComboCounts[h] = (newComboCounts[h] || 0) + 1;
