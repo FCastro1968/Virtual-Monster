@@ -7033,21 +7033,24 @@ async function loadContributors(period) {
       .slice(0, 10)
       .map(([handle, count]) => ({ handle, count }));
 
-    // ── New combos (first confirmed submission per combination, in period) ──
-    // A "new combo" credit goes to whoever has the earliest confirmed submission
-    // for each combination. Uses combination_id as the key.
+    // ── New combos (first confirmed submission for is_new_discovery combinations) ──
+    // Only combinations flagged is_new_discovery=true count as new combos.
+    // Credit goes to the earliest confirmed submission for that combination.
     const { data: allFirstRows } = await db
       .from('submissions')
       .select(`
         combination_id, submitted_by, submitted_at, guest_handle,
-        submitter:users!submitted_by ( handle )
+        submitter:users!submitted_by ( handle ),
+        combinations!combination_id ( is_new_discovery )
       `)
       .eq('status', 'confirmed')
+      .eq('combinations.is_new_discovery', true)
       .order('submitted_at', { ascending: true });
 
     // For each combination, keep only the earliest confirmed submission
     const firstByCombo = {};
     (allFirstRows || []).forEach(r => {
+      if (!r.combinations?.is_new_discovery) return;
       if (!firstByCombo[r.combination_id]) firstByCombo[r.combination_id] = r;
     });
 
