@@ -130,7 +130,7 @@
   }
 
   /* ── REVIEW TABLE ── */
-  #review-section { display: none; }
+
   .table-wrap { overflow-x: auto; }
   table {
     width: 100%;
@@ -210,7 +210,6 @@
   }
 
   /* ── COMMIT CONTROLS ── */
-  #commit-section { display: none; }
   .commit-bar {
     display: flex;
     gap: 0.75rem;
@@ -236,7 +235,6 @@
   }
 
   /* ── LOG ── */
-  #log-section { display: none; }
   #log {
     font-family: monospace;
     font-size: 0.72rem;
@@ -280,7 +278,7 @@
   </div>
 
   <!-- PHASE 2: SCAN FILES -->
-  <div class="section" id="scan-section" style="display:none;">
+  <div class="section" id="scan-section" hidden>
     <div class="section-title">Phase 2 — Scan Files</div>
     <p style="font-family:monospace;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.75rem;">
       Name files <strong>{cert}_F.jpg</strong> and <strong>{cert}_B.jpg</strong> — tool will pair them automatically.
@@ -296,7 +294,7 @@
   </div>
 
   <!-- REVIEW TABLE -->
-  <div class="section" id="review-section">
+  <div class="section" id="review-section" hidden>
     <div class="section-title">Review — Edit fields before committing</div>
     <div class="table-wrap">
       <table>
@@ -318,7 +316,7 @@
   </div>
 
   <!-- COMMIT -->
-  <div class="section" id="commit-section">
+  <div class="section" id="commit-section" hidden>
     <div class="section-title">Commit Selected Rows</div>
     <div class="commit-bar">
       <button class="btn btn-success" id="commit-btn" onclick="commitSelected()">Commit Selected →</button>
@@ -327,7 +325,7 @@
   </div>
 
   <!-- LOG -->
-  <div class="section" id="log-section">
+  <div class="section" id="log-section" hidden>
     <div class="section-title">Log</div>
     <div id="log"></div>
   </div>
@@ -546,17 +544,19 @@ async function startVerification() {
 
   progEl.textContent = `Done — ${ROWS.filter(r=>r.status==='verified').length} verified, ${ROWS.filter(r=>r.status==='exists').length} skipped (already exist), ${ROWS.filter(r=>r.status==='not_found'||r.status==='error').length} failed.`;
   document.getElementById('verify-btn').disabled = false;
-  document.getElementById('review-section').style.display = '';
-  document.getElementById('scan-section').style.display   = '';
-  document.getElementById('commit-section').style.display = '';
-  document.getElementById('log-section').style.display    = '';
+  ['review-section','scan-section','commit-section','log-section'].forEach(id => {
+    const el = document.getElementById(id);
+    el.removeAttribute('hidden');
+    el.style.display = 'block';
+  });
   console.log(`Rows rendered: ${ROWS.length}`, ROWS);
 }
 
 // ── REVIEW TABLE ─────────────────────────────────────────────────────────────
 function renderRow(idx) {
   const reviewSection = document.getElementById('review-section');
-  reviewSection.style.display = '';
+  reviewSection.removeAttribute('hidden');
+  reviewSection.style.display = 'block';
   const tbody = document.getElementById('review-tbody');
   const row   = ROWS[idx];
 
@@ -862,10 +862,10 @@ function clearAll() {
   document.getElementById('review-tbody').innerHTML = '';
   document.getElementById('verify-progress').textContent = '';
   document.getElementById('scan-summary').textContent = '';
-  document.getElementById('review-section').style.display  = 'none';
-  document.getElementById('scan-section').style.display    = 'none';
-  document.getElementById('commit-section').style.display  = 'none';
-  document.getElementById('log-section').style.display     = 'none';
+  document.getElementById('review-section').setAttribute('hidden', '');
+  document.getElementById('scan-section').setAttribute('hidden', '');
+  document.getElementById('commit-section').setAttribute('hidden', '');
+  document.getElementById('log-section').setAttribute('hidden', '');
   document.getElementById('log').innerHTML = '';
   ROWS     = [];
   SCAN_MAP = {};
