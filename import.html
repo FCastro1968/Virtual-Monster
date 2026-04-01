@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual Monster — Bulk Import</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --ink: #1a1208;
+    --sepia: #8B6914;
+    --aged: #c4a35a;
+    --cream: #f5edd8;
+    --parchment: #ede0c4;
+    --faded: #d4c4a0;
+    --rust: #8B3A1A;
+    --forest: #2C4A2E;
+    --gold: #C9922A;
+    --text-primary: #3d2b08;
+    --text-secondary: #5c420a;
+    --text-muted: #6b5c3e;
+    --rule: rgba(139,105,20,0.3);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Georgia', serif;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  h1 {
+    font-family: 'Georgia', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    font-family: monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+  }
+
+  /* ── PASSWORD GATE ── */
+  #gate {
+    max-width: 360px;
+    margin: 6rem auto;
+    background: var(--parchment);
+    border: 1px solid var(--rule);
+    padding: 2rem;
+  }
+  #gate h2 { font-size: 1rem; margin-bottom: 1rem; color: var(--text-primary); }
+  #gate input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-family: monospace;
+    font-size: 0.9rem;
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    margin-bottom: 0.75rem;
+  }
+  #gate-err { font-family: monospace; font-size: 0.72rem; color: var(--rust); margin-bottom: 0.5rem; }
+
+  /* ── SHARED CONTROLS ── */
+  .btn {
+    font-family: monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    padding: 0.55rem 1.1rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover:not(:disabled) { opacity: 0.8; }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--rule);
+  }
+  .btn-success { background: var(--forest); }
+  .btn-danger  { background: var(--rust); }
+
+  /* ── LAYOUT ── */
+  #app { display: none; }
+  .section {
+    background: var(--parchment);
+    border: 1px solid var(--rule);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section-title {
+    font-family: monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* ── PHASE 1: CERT INPUT ── */
+  #cert-textarea {
+    width: 100%;
+    height: 140px;
+    font-family: monospace;
+    font-size: 0.85rem;
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    padding: 0.75rem;
+    resize: vertical;
+    margin-bottom: 0.75rem;
+  }
+  .phase-controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  #verify-progress {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex: 1;
+  }
+
+  /* ── REVIEW TABLE ── */
+  #review-section { display: none; }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    font-family: monospace;
+  }
+  th {
+    text-align: left;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 0.4rem 0.6rem;
+    border-bottom: 2px solid var(--rule);
+    white-space: nowrap;
+    background: var(--parchment);
+    position: sticky;
+    top: 0;
+  }
+  td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid rgba(139,105,20,0.12);
+    vertical-align: middle;
+  }
+  tr.skip-row { opacity: 0.4; }
+  tr.error-row td { background: rgba(139,58,26,0.06); }
+  tr.ready-row td { background: rgba(44,74,46,0.04); }
+
+  td select, td input[type="text"] {
+    font-family: monospace;
+    font-size: 0.75rem;
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    padding: 0.25rem 0.4rem;
+    width: 100%;
+    min-width: 140px;
+  }
+  td select.warn { border-color: var(--gold); background: rgba(201,146,42,0.08); }
+  td select.err  { border-color: var(--rust); background: rgba(139,58,26,0.06); }
+
+  .status-badge {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .badge-ok     { color: var(--forest); border-color: var(--forest); background: rgba(44,74,46,0.07); }
+  .badge-warn   { color: var(--sepia);  border-color: var(--gold);   background: rgba(201,146,42,0.08); }
+  .badge-skip   { color: var(--text-muted); border-color: var(--rule); }
+  .badge-error  { color: var(--rust);   border-color: var(--rust);   background: rgba(139,58,26,0.06); }
+  .badge-done   { color: var(--forest); border-color: var(--forest); background: rgba(44,74,46,0.12); font-weight: 700; }
+
+  /* ── SCAN DROP ZONE ── */
+  #scan-drop {
+    border: 2px dashed var(--rule);
+    background: var(--cream);
+    padding: 1.5rem;
+    text-align: center;
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  #scan-drop.drag-over { border-color: var(--gold); background: rgba(201,146,42,0.06); }
+  #scan-drop input { display: none; }
+  #scan-summary {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── COMMIT CONTROLS ── */
+  #commit-section { display: none; }
+  .commit-bar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  #commit-progress {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex: 1;
+  }
+  .select-all-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  /* ── LOG ── */
+  #log-section { display: none; }
+  #log {
+    font-family: monospace;
+    font-size: 0.72rem;
+    background: var(--ink);
+    color: #c4b898;
+    padding: 1rem;
+    height: 220px;
+    overflow-y: auto;
+    line-height: 1.7;
+  }
+  .log-ok   { color: #7db87d; }
+  .log-warn { color: #c9922a; }
+  .log-err  { color: #c47a6a; }
+  .log-info { color: #8ab0c4; }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="gate">
+  <h2>Virtual Monster — Bulk Import</h2>
+  <input type="password" id="gate-pw" placeholder="Password" onkeydown="if(event.key==='Enter')checkGate()">
+  <div id="gate-err"></div>
+  <button class="btn" onclick="checkGate()">Enter →</button>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <h1>Virtual Monster</h1>
+  <div class="subtitle">PSA Bulk Import Tool · Admin Only</div>
+
+  <!-- PHASE 1: CERT ENTRY -->
+  <div class="section">
+    <div class="section-title">Phase 1 — Cert Numbers</div>
+    <textarea id="cert-textarea" placeholder="Paste PSA cert numbers, one per line:&#10;09111069&#10;01018534&#10;12345678"></textarea>
+    <div class="phase-controls">
+      <button class="btn" id="verify-btn" onclick="startVerification()">Verify All →</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+      <span id="verify-progress"></span>
+    </div>
+  </div>
+
+  <!-- PHASE 2: SCAN FILES -->
+  <div class="section" id="scan-section" style="display:none;">
+    <div class="section-title">Phase 2 — Scan Files</div>
+    <p style="font-family:monospace;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.75rem;">
+      Name files <strong>{cert}_F.jpg</strong> and <strong>{cert}_B.jpg</strong> — tool will pair them automatically.
+    </p>
+    <div id="scan-drop" onclick="document.getElementById('scan-file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleScanDrop(event)">
+      Drop scan folder here or click to select files
+      <input type="file" id="scan-file-input" multiple accept="image/*" onchange="handleScanFiles(this.files)">
+    </div>
+    <div id="scan-summary"></div>
+  </div>
+
+  <!-- REVIEW TABLE -->
+  <div class="section" id="review-section">
+    <div class="section-title">Review — Edit fields before committing</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="select-all-chk" onchange="toggleSelectAll(this.checked)" title="Select all ready rows"></th>
+            <th>Cert #</th>
+            <th>Grade</th>
+            <th>Player</th>
+            <th>Back Brand</th>
+            <th>Back Series</th>
+            <th>Scans</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="review-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COMMIT -->
+  <div class="section" id="commit-section">
+    <div class="section-title">Commit Selected Rows</div>
+    <div class="commit-bar">
+      <button class="btn btn-success" id="commit-btn" onclick="commitSelected()">Commit Selected →</button>
+      <span id="commit-progress"></span>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="section" id="log-section">
+    <div class="section-title">Log</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const IMPORT_PASSWORD = 'vm2024admin';
+const SUPABASE_URL    = 'https://visrbvpidnhbvpjsoxtf.supabase.co';
+const SUPABASE_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpc3JidnBpZG5oYnZwanNveHRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NDQ2ODUsImV4cCI6MjA4OTEyMDY4NX0.8qkEhZwNfRDoDHHmdbUsastLINXKlZpC7iQ0Tpobha0';
+const ADMIN_USER_ID   = '76692342-d56a-49db-a3e9-c0551188f57e';
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── BRAND / SERIES MAP ──────────────────────────────────────────────────────
+const BRAND_SERIES_MAP = {
+  'American Beauty': ['American Beauty 350 Frame','American Beauty 350 No Frame','American Beauty 460'],
+  'Broadleaf':       ['Broadleaf 350','Broadleaf 460'],
+  'Carolina Brights':['Carolina Brights'],
+  'Cycle':           ['Cycle 350','Cycle 460'],
+  'Drum':            ['Drum 350'],
+  'El Principe De Gales': ['El Principe De Gales'],
+  'Hindu':           ['Brown Hindu','Red Hindu'],
+  'Lenox':           ['Black Lenox','Brown Lenox'],
+  'Old Mill':        ['Old Mill','Old Mill Southern League'],
+  'Piedmont':        ['Piedmont 150','Piedmont 350','Piedmont 350-460 Fac. 25','Piedmont 350-460 Fac. 42'],
+  'Polar Bear':      ['Polar Bear'],
+  'Sovereign':       ['Sovereign 150','Sovereign 350','Sovereign 350 Apple Green','Sovereign 460'],
+  'Sweet Caporal':   ['Sweet Caporal 150 Fac. 25','Sweet Caporal 150 Fac. 30','Sweet Caporal 150 Fac. 649',
+                      'Sweet Caporal 350 Fac. 25','Sweet Caporal 350 Fac. 30',
+                      'Sweet Caporal 350-460 Fac. 25','Sweet Caporal 350-460 Fac. 30',
+                      'Sweet Caporal 350-460 Fac. 42','Sweet Caporal 350-460 Fac. 42 OP'],
+  'Tolstoi':         ['Tolstoi'],
+  'Uzit':            ['Uzit'],
+};
+
+const ALL_BRANDS  = Object.keys(BRAND_SERIES_MAP).sort();
+const ALL_SERIES  = Object.values(BRAND_SERIES_MAP).flat().sort();
+
+// Player list loaded from DB
+let PLAYERS = [];
+// Scan files keyed by cert number
+let SCAN_MAP = {}; // { certNum: { F: File, B: File } }
+// Review rows
+let ROWS = []; // { cert, grade, gradeNumeric, player, brand, series, psaSubject, psaVariety, psaBrand, status, commitStatus }
+
+// ── GATE ────────────────────────────────────────────────────────────────────
+function checkGate() {
+  const pw = document.getElementById('gate-pw').value;
+  if (pw === IMPORT_PASSWORD) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display  = 'block';
+    loadPlayers();
+  } else {
+    document.getElementById('gate-err').textContent = 'Incorrect password.';
+  }
+}
+
+async function loadPlayers() {
+  const { data } = await db.from('players').select('name').order('name');
+  PLAYERS = (data || []).map(r => r.name);
+}
+
+// ── GRADE PARSING ───────────────────────────────────────────────────────────
+function gradeToNum(gradeStr) {
+  if (!gradeStr) return -1;
+  const m = gradeStr.match(/[\d.]+/);
+  if (!m) return -1;
+  let grade = parseFloat(m[0]);
+  if (/\(/.test(gradeStr)) {
+    if      (grade >= 4) grade -= 2;
+    else if (grade >= 2) grade -= 1;
+  }
+  return grade;
+}
+
+// ── PLAYER MATCHING ─────────────────────────────────────────────────────────
+function matchPlayer(subject, variety, brand) {
+  const subject_lc = (subject || '').toLowerCase().trim();
+  const variety_lc = (variety || '').toLowerCase().replace(/-/g, ' ').trim();
+
+  let subjectLastName = '';
+  if (subject_lc.includes(',')) {
+    subjectLastName = subject_lc.split(',')[0].trim();
+  } else {
+    subjectLastName = subject_lc.split(' ').pop().trim();
+  }
+
+  let best = null, bestScore = 0;
+  for (const player of PLAYERS) {
+    const p_lc    = player.toLowerCase();
+    const lastName = p_lc.split(/[\s(]/)[0].trim();
+    let score = 0;
+
+    if (lastName === subjectLastName)                            score += 10;
+    else if (lastName.startsWith(subjectLastName) ||
+             subjectLastName.startsWith(lastName))               score += 6;
+    else if (lastName.includes(subjectLastName) ||
+             subjectLastName.includes(lastName))                 score += 4;
+
+    if (variety_lc) {
+      const varietyWords = variety_lc.split(' ').filter(w => w.length > 3);
+      varietyWords.forEach(w => { if (p_lc.includes(w)) score += 3; });
+    }
+
+    if (score > bestScore) { bestScore = score; best = player; }
+  }
+  return bestScore >= 6 ? best : null;
+}
+
+// Match PSA brand string to our brand key
+function matchBrand(psaBrand) {
+  if (!psaBrand) return null;
+  const b = psaBrand.toLowerCase();
+  for (const brand of ALL_BRANDS) {
+    if (b.startsWith(brand.toLowerCase()) || brand.toLowerCase().startsWith(b.split(' ')[0])) {
+      return brand;
+    }
+  }
+  return null;
+}
+
+// Match PSA brand string to a specific series
+function matchSeries(psaBrand, brandKey) {
+  if (!psaBrand || !brandKey) return null;
+  const variants = BRAND_SERIES_MAP[brandKey] || [];
+  // Try to find a series that starts with the PSA brand string
+  const filtered = variants.filter(v => v.startsWith(psaBrand) || psaBrand.startsWith(v.split(' ').slice(0,2).join(' ')));
+  return filtered.length === 1 ? filtered[0] : null;
+}
+
+// ── VERIFICATION ─────────────────────────────────────────────────────────────
+async function startVerification() {
+  const raw = document.getElementById('cert-textarea').value.trim();
+  if (!raw) return;
+
+  const certs = [...new Set(raw.split(/\s+/).map(c => c.trim()).filter(Boolean))];
+  if (!certs.length) return;
+
+  document.getElementById('verify-btn').disabled = true;
+  document.getElementById('verify-progress').textContent = `Loading player list…`;
+
+  // Ensure players loaded before building dropdowns
+  if (!PLAYERS.length) await loadPlayers();
+  console.log(`Players loaded: ${PLAYERS.length}`);
+
+  document.getElementById('verify-progress').textContent = `Checking for existing certs…`;
+
+  // Check which certs already exist in DB
+  const { data: existing } = await db
+    .from('submissions')
+    .select('cert_number')
+    .in('cert_number', certs)
+    .not('status', 'in', '("rejected","removed")');
+
+  const existingSet = new Set((existing || []).map(r => r.cert_number));
+
+  ROWS = [];
+  const progEl = document.getElementById('verify-progress');
+
+  for (let i = 0; i < certs.length; i++) {
+    const cert = certs[i];
+    progEl.textContent = `Verifying ${i + 1} / ${certs.length}: ${cert}…`;
+
+    if (existingSet.has(cert)) {
+      ROWS.push({ cert, grade: '—', gradeNumeric: null, player: null, brand: null, series: null,
+                  psaSubject: null, psaVariety: null, psaBrand: null,
+                  status: 'exists', commitStatus: 'skip' });
+      renderRow(ROWS.length - 1);
+      continue;
+    }
+
+    try {
+      const res  = await fetch(`${SUPABASE_URL}/functions/v1/hyper-service`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ certNumber: cert, grader: 'PSA' })
+      });
+      const data = await res.json();
+
+      if (!data.found) {
+        ROWS.push({ cert, grade: '—', gradeNumeric: null, player: null, brand: null, series: null,
+                    psaSubject: null, psaVariety: null, psaBrand: null,
+                    status: 'not_found', commitStatus: 'skip' });
+      } else {
+        const player     = matchPlayer(data.subject, data.variety, data.brand);
+        const brandKey   = matchBrand(data.brand);
+        const seriesKey  = matchSeries(data.brand, brandKey);
+        const gn         = (data.gradeNumeric && data.gradeNumeric > 0)
+                           ? data.gradeNumeric
+                           : gradeToNum(data.grade);
+
+        ROWS.push({
+          cert,
+          grade:       data.grade || '—',
+          gradeNumeric: gn >= 0 ? gn : null,
+          player,
+          brand:       brandKey,
+          series:      seriesKey,
+          psaSubject:  data.subject,
+          psaVariety:  data.variety,
+          psaBrand:    data.brand,
+          status:      'verified',
+          commitStatus: 'pending',
+        });
+      }
+    } catch(e) {
+      ROWS.push({ cert, grade: '—', gradeNumeric: null, player: null, brand: null, series: null,
+                  psaSubject: null, psaVariety: null, psaBrand: null,
+                  status: 'error', commitStatus: 'skip' });
+    }
+
+    renderRow(ROWS.length - 1);
+    await new Promise(r => setTimeout(r, 300)); // rate limit
+  }
+
+  progEl.textContent = `Done — ${ROWS.filter(r=>r.status==='verified').length} verified, ${ROWS.filter(r=>r.status==='exists').length} skipped (already exist), ${ROWS.filter(r=>r.status==='not_found'||r.status==='error').length} failed.`;
+  document.getElementById('verify-btn').disabled = false;
+  document.getElementById('review-section').style.display = '';
+  document.getElementById('scan-section').style.display   = '';
+  document.getElementById('commit-section').style.display = '';
+  document.getElementById('log-section').style.display    = '';
+  console.log(`Rows rendered: ${ROWS.length}`, ROWS);
+}
+
+// ── REVIEW TABLE ─────────────────────────────────────────────────────────────
+function renderRow(idx) {
+  const reviewSection = document.getElementById('review-section');
+  reviewSection.style.display = '';
+  const tbody = document.getElementById('review-tbody');
+  const row   = ROWS[idx];
+
+  // Remove existing row if re-rendering
+  const existing = document.getElementById(`row-${idx}`);
+  if (existing) existing.remove();
+
+  const tr = document.createElement('tr');
+  tr.id = `row-${idx}`;
+
+  if (row.status === 'exists') {
+    tr.className = 'skip-row';
+    tr.innerHTML = `
+      <td></td>
+      <td>${row.cert}</td>
+      <td colspan="5" style="font-style:italic;color:var(--text-muted);">Already in archive — skipped</td>
+      <td><span class="status-badge badge-skip">Exists</span></td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  if (row.status === 'not_found' || row.status === 'error') {
+    tr.className = 'error-row';
+    tr.innerHTML = `
+      <td></td>
+      <td>${row.cert}</td>
+      <td colspan="5" style="font-style:italic;color:var(--rust);">${row.status === 'not_found' ? 'Not found in PSA registry' : 'Verification error'}</td>
+      <td><span class="status-badge badge-error">${row.status === 'not_found' ? 'Not Found' : 'Error'}</span></td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  // Build player options
+  const playerOpts = PLAYERS.map(p =>
+    `<option value="${p}" ${p === row.player ? 'selected' : ''}>${p}</option>`
+  ).join('');
+
+  // Build brand options
+  const brandOpts = ['', ...ALL_BRANDS].map(b =>
+    `<option value="${b}" ${b === row.brand ? 'selected' : ''}>${b || '— select brand —'}</option>`
+  ).join('');
+
+  // Build series options for current brand
+  const seriesVariants = row.brand ? BRAND_SERIES_MAP[row.brand] || [] : [];
+  const seriesOpts = ['', ...seriesVariants].map(s =>
+    `<option value="${s}" ${s === row.series ? 'selected' : ''}>${s || '— select series —'}</option>`
+  ).join('');
+
+  const playerWarn  = !row.player  ? ' err'  : '';
+  const brandWarn   = !row.brand   ? ' err'  : '';
+  const seriesWarn  = !row.series  ? ' warn' : '';
+
+  const scanInfo = SCAN_MAP[row.cert]
+    ? `<span style="color:var(--forest)">F+B ✓</span>`
+    : `<span style="color:var(--text-muted)">—</span>`;
+
+  let badgeClass = 'badge-warn', badgeLabel = 'Review';
+  if (!row.player || !row.brand || !row.series) { badgeClass = 'badge-warn'; badgeLabel = 'Incomplete'; }
+  if (row.player && row.brand && row.series)    { badgeClass = 'badge-ok';   badgeLabel = 'Ready'; }
+
+  tr.className = (row.player && row.brand && row.series) ? 'ready-row' : '';
+  tr.innerHTML = `
+    <td><input type="checkbox" class="row-chk" data-idx="${idx}" ${(row.player && row.brand && row.series) ? 'checked' : ''}></td>
+    <td style="white-space:nowrap;font-weight:700;">${row.cert}</td>
+    <td style="white-space:nowrap;">${row.grade}</td>
+    <td>
+      <select class="${'player-sel'+playerWarn}" data-idx="${idx}" onchange="updatePlayer(this)">
+        <option value="">— select player —</option>
+        ${playerOpts}
+      </select>
+    </td>
+    <td>
+      <select class="${'brand-sel'+brandWarn}" data-idx="${idx}" onchange="updateBrand(this)">
+        ${brandOpts}
+      </select>
+    </td>
+    <td>
+      <select class="${'series-sel'+seriesWarn}" data-idx="${idx}" onchange="updateSeries(this)">
+        ${seriesOpts}
+      </select>
+    </td>
+    <td id="scan-cell-${idx}">${scanInfo}</td>
+    <td><span class="status-badge ${badgeClass}" id="badge-${idx}">${badgeLabel}</span></td>`;
+
+  tbody.appendChild(tr);
+}
+
+function updatePlayer(sel) {
+  const idx = parseInt(sel.dataset.idx);
+  ROWS[idx].player = sel.value || null;
+  refreshRowBadge(idx);
+}
+
+function updateBrand(sel) {
+  const idx = parseInt(sel.dataset.idx);
+  ROWS[idx].brand  = sel.value || null;
+  ROWS[idx].series = null;
+  // Rebuild series dropdown
+  const tr         = document.getElementById(`row-${idx}`);
+  const seriesSel  = tr.querySelector('.series-sel');
+  const variants   = ROWS[idx].brand ? BRAND_SERIES_MAP[ROWS[idx].brand] || [] : [];
+  seriesSel.innerHTML = ['', ...variants].map(s =>
+    `<option value="${s}">${s || '— select series —'}</option>`).join('');
+  // Auto-select if only one variant
+  if (variants.length === 1) { seriesSel.value = variants[0]; ROWS[idx].series = variants[0]; }
+  refreshRowBadge(idx);
+}
+
+function updateSeries(sel) {
+  const idx = parseInt(sel.dataset.idx);
+  ROWS[idx].series = sel.value || null;
+  refreshRowBadge(idx);
+}
+
+function refreshRowBadge(idx) {
+  const row   = ROWS[idx];
+  const badge = document.getElementById(`badge-${idx}`);
+  const tr    = document.getElementById(`row-${idx}`);
+  const chk   = tr.querySelector('.row-chk');
+  if (!badge) return;
+  if (row.player && row.brand && row.series) {
+    badge.className = 'status-badge badge-ok';
+    badge.textContent = 'Ready';
+    tr.className = 'ready-row';
+    if (chk) chk.checked = true;
+  } else {
+    badge.className = 'status-badge badge-warn';
+    badge.textContent = 'Incomplete';
+    tr.className = '';
+    if (chk) chk.checked = false;
+  }
+}
+
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.row-chk').forEach(chk => {
+    const idx = parseInt(chk.dataset.idx);
+    const row = ROWS[idx];
+    if (row && row.status === 'verified' && row.player && row.brand && row.series) {
+      chk.checked = checked;
+    }
+  });
+}
+
+// ── SCAN FILES ────────────────────────────────────────────────────────────────
+function handleScanDrop(e) {
+  e.preventDefault();
+  document.getElementById('scan-drop').classList.remove('drag-over');
+  const files = e.dataTransfer.files;
+  handleScanFiles(files);
+}
+
+function handleScanFiles(files) {
+  let matched = 0;
+  for (const file of files) {
+    const name = file.name;
+    const m    = name.match(/^(\d+)_(F|B)\./i);
+    if (!m) continue;
+    const cert = m[1];
+    const side = m[2].toUpperCase();
+    if (!SCAN_MAP[cert]) SCAN_MAP[cert] = {};
+    SCAN_MAP[cert][side] = file;
+    matched++;
+  }
+
+  // Update scan cells in table
+  ROWS.forEach((row, idx) => {
+    const cell = document.getElementById(`scan-cell-${idx}`);
+    if (!cell) return;
+    const s = SCAN_MAP[row.cert];
+    if (s && s.F && s.B) cell.innerHTML = `<span style="color:var(--forest)">F+B ✓</span>`;
+    else if (s && (s.F || s.B)) cell.innerHTML = `<span style="color:var(--gold)">${s.F?'F':''}${s.B?'B':''} only</span>`;
+  });
+
+  const pairs = Object.values(SCAN_MAP).filter(s => s.F && s.B).length;
+  document.getElementById('scan-summary').textContent =
+    `${matched} scan files loaded · ${pairs} complete pairs (F+B) matched`;
+}
+
+// ── COMMIT ────────────────────────────────────────────────────────────────────
+async function commitSelected() {
+  const checked = [...document.querySelectorAll('.row-chk:checked')];
+  if (!checked.length) { alert('No rows selected.'); return; }
+
+  const toCommit = checked.map(chk => parseInt(chk.dataset.idx))
+    .filter(idx => ROWS[idx].status === 'verified' && ROWS[idx].player && ROWS[idx].brand && ROWS[idx].series);
+
+  if (!toCommit.length) { alert('No ready rows selected — make sure player, brand, and series are all set.'); return; }
+
+  if (!confirm(`Commit ${toCommit.length} submission${toCommit.length>1?'s':''} to the archive?`)) return;
+
+  document.getElementById('commit-btn').disabled = true;
+  const progEl = document.getElementById('commit-progress');
+  let done = 0, failed = 0;
+
+  for (const idx of toCommit) {
+    const row = ROWS[idx];
+    progEl.textContent = `Committing ${done + failed + 1} / ${toCommit.length}: ${row.cert}…`;
+
+    try {
+      // 1. Look up player_id and back_id
+      const { data: playerRow } = await db.from('players').select('id').eq('name', row.player).single();
+      const { data: backRow }   = await db.from('backs').select('id').eq('name', row.series).single();
+
+      if (!playerRow) throw new Error(`Player not found: ${row.player}`);
+      if (!backRow)   throw new Error(`Back not found: ${row.series}`);
+
+      // 2. Look up or create combination
+      let { data: combo } = await db.from('combinations')
+        .select('id').eq('player_id', playerRow.id).eq('back_id', backRow.id).maybeSingle();
+
+      if (!combo) {
+        const { data: newCombo, error: comboErr } = await db.from('combinations')
+          .insert({ player_id: playerRow.id, back_id: backRow.id, is_in_brown: false, is_new_discovery: false })
+          .select('id').single();
+        if (comboErr) throw comboErr;
+        combo = newCombo;
+        log(`↳ New combination created: ${row.player} / ${row.series}`, 'warn');
+      }
+
+      // 3. Insert submission
+      const gn = (row.gradeNumeric && row.gradeNumeric > 0) ? row.gradeNumeric : gradeToNum(row.grade);
+      const { data: sub, error: subErr } = await db.from('submissions').insert({
+        combination_id:   combo.id,
+        submitted_by:     ADMIN_USER_ID,
+        is_graded:        true,
+        grader:           'PSA',
+        cert_number:      row.cert,
+        grade:            row.grade,
+        grade_numeric:    gn >= 0 ? gn : null,
+        status:           'confirmed',
+        cert_verified_at: new Date().toISOString(),
+        cert_data:        JSON.stringify({ company:'PSA', cert:row.cert, grade:row.grade,
+                            subject:row.psaSubject, variety:row.psaVariety, brand:row.psaBrand }),
+      }).select('id').single();
+
+      if (subErr) {
+        if (subErr.code === '23505') {
+          log(`⚠ ${row.cert} — cert already exists, skipped`, 'warn');
+          updateRowBadgeDone(idx, 'badge-skip', 'Duplicate');
+          done++; continue;
+        }
+        throw subErr;
+      }
+
+      // 4. Upload scans if available
+      const scans = SCAN_MAP[row.cert];
+      const scanRecords = [];
+      if (scans) {
+        const sides = [['F', 'Front', 0], ['B', 'Back', 1]];
+        for (const [key, label, order] of sides) {
+          if (!scans[key]) continue;
+          const file = scans[key];
+          const ext  = file.name.split('.').pop().toLowerCase();
+          const path = `${ADMIN_USER_ID}/${sub.id}/${order}-${Date.now()}.${ext}`;
+          const { error: upErr } = await db.storage.from('scans')
+            .upload(path, file, { contentType: file.type, upsert: false });
+          if (upErr) { log(`  ↳ Scan upload failed (${label}): ${upErr.message}`, 'warn'); continue; }
+          scanRecords.push({ submission_id: sub.id, storage_path: path, label, sort_order: order });
+        }
+        if (scanRecords.length) {
+          const { error: scanErr } = await db.from('scans').insert(scanRecords);
+          if (scanErr) log(`  ↳ Scan record insert failed: ${scanErr.message}`, 'warn');
+        }
+      }
+
+      const scanNote = scanRecords.length ? ` · ${scanRecords.length} scan(s) uploaded` : ' · no scans';
+      log(`✓ ${row.cert} — ${row.player} / ${row.series} — ${row.grade}${scanNote}`, 'ok');
+      updateRowBadgeDone(idx, 'badge-done', 'Committed');
+      done++;
+
+    } catch(e) {
+      log(`✗ ${row.cert} — ${e.message}`, 'err');
+      updateRowBadgeDone(idx, 'badge-error', 'Failed');
+      failed++;
+    }
+
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  progEl.textContent = `Complete — ${done} committed, ${failed} failed.`;
+  document.getElementById('commit-btn').disabled = false;
+  log(`─── Batch complete: ${done} committed, ${failed} failed ───`, 'info');
+}
+
+function updateRowBadgeDone(idx, cls, label) {
+  const badge = document.getElementById(`badge-${idx}`);
+  if (badge) { badge.className = `status-badge ${cls}`; badge.textContent = label; }
+  const chk = document.querySelector(`.row-chk[data-idx="${idx}"]`);
+  if (chk) chk.checked = false;
+}
+
+// ── LOG ───────────────────────────────────────────────────────────────────────
+function log(msg, type = 'info') {
+  const el  = document.getElementById('log');
+  const cls = { ok:'log-ok', warn:'log-warn', err:'log-err', info:'log-info' }[type] || 'log-info';
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop  = el.scrollHeight;
+}
+
+// ── MISC ──────────────────────────────────────────────────────────────────────
+function clearAll() {
+  document.getElementById('cert-textarea').value = '';
+  document.getElementById('review-tbody').innerHTML = '';
+  document.getElementById('verify-progress').textContent = '';
+  document.getElementById('scan-summary').textContent = '';
+  document.getElementById('review-section').style.display  = 'none';
+  document.getElementById('scan-section').style.display    = 'none';
+  document.getElementById('commit-section').style.display  = 'none';
+  document.getElementById('log-section').style.display     = 'none';
+  document.getElementById('log').innerHTML = '';
+  ROWS     = [];
+  SCAN_MAP = {};
+}
+</script>
+</body>
+</html>
