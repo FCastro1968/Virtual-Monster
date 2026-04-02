@@ -266,22 +266,11 @@
   <h1>Virtual Monster</h1>
   <div class="subtitle">PSA Bulk Import Tool · Admin Only</div>
 
-  <!-- PHASE 1: CERT ENTRY -->
+  <!-- PHASE 1: SCAN FILES -->
   <div class="section">
-    <div class="section-title">Phase 1 — Cert Numbers</div>
-    <textarea id="cert-textarea" placeholder="Paste PSA cert numbers, one per line:&#10;09111069&#10;01018534&#10;12345678"></textarea>
-    <div class="phase-controls">
-      <button class="btn" id="verify-btn" onclick="startVerification()">Verify All →</button>
-      <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
-      <span id="verify-progress"></span>
-    </div>
-  </div>
-
-  <!-- PHASE 2: SCAN FILES -->
-  <div class="section" id="scan-section" hidden>
-    <div class="section-title">Phase 2 — Scan Files</div>
+    <div class="section-title">Phase 1 — Drop Scans</div>
     <p style="font-family:monospace;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.75rem;">
-      Name files <strong>{cert}_F.jpg</strong> and <strong>{cert}_B.jpg</strong> — tool will pair them automatically.
+      Name files <strong>{cert}_F.jpg</strong> and <strong>{cert}_B.jpg</strong> — cert numbers will populate automatically.
     </p>
     <div id="scan-drop" onclick="document.getElementById('scan-file-input').click()"
          ondragover="event.preventDefault();this.classList.add('drag-over')"
@@ -291,6 +280,20 @@
       <input type="file" id="scan-file-input" multiple accept="image/*" onchange="handleScanFiles(this.files)">
     </div>
     <div id="scan-summary"></div>
+  </div>
+
+  <!-- PHASE 2: CERT NUMBERS (auto-populated) -->
+  <div class="section" id="cert-section" hidden>
+    <div class="section-title">Phase 2 — Verify Certs</div>
+    <p style="font-family:monospace;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.75rem;">
+      Cert numbers extracted from scan filenames. Add or remove any before verifying.
+    </p>
+    <textarea id="cert-textarea" placeholder="Cert numbers will appear here after dropping scans…"></textarea>
+    <div class="phase-controls">
+      <button class="btn" id="verify-btn" onclick="startVerification()">Verify All →</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+      <span id="verify-progress"></span>
+    </div>
   </div>
 
   <!-- REVIEW TABLE -->
@@ -544,7 +547,7 @@ async function startVerification() {
 
   progEl.textContent = `Done — ${ROWS.filter(r=>r.status==='verified').length} verified, ${ROWS.filter(r=>r.status==='exists').length} skipped (already exist), ${ROWS.filter(r=>r.status==='not_found'||r.status==='error').length} failed.`;
   document.getElementById('verify-btn').disabled = false;
-  ['review-section','scan-section','commit-section','log-section'].forEach(id => {
+  ['review-section','commit-section','log-section'].forEach(id => {
     const el = document.getElementById(id);
     el.removeAttribute('hidden');
     el.style.display = 'block';
@@ -721,7 +724,18 @@ function handleScanFiles(files) {
     matched++;
   }
 
-  // Update scan cells in table
+  // Auto-populate cert textarea from paired scans
+  const pairs = Object.entries(SCAN_MAP).filter(([, s]) => s.F && s.B).map(([cert]) => cert);
+  const unpaired = Object.entries(SCAN_MAP).filter(([, s]) => !(s.F && s.B)).map(([cert]) => cert);
+
+  if (pairs.length > 0) {
+    document.getElementById('cert-textarea').value = pairs.join('\n');
+    const certSection = document.getElementById('cert-section');
+    certSection.removeAttribute('hidden');
+    certSection.style.display = 'block';
+  }
+
+  // Update scan cells in review table if already rendered
   ROWS.forEach((row, idx) => {
     const cell = document.getElementById(`scan-cell-${idx}`);
     if (!cell) return;
@@ -730,9 +744,9 @@ function handleScanFiles(files) {
     else if (s && (s.F || s.B)) cell.innerHTML = `<span style="color:var(--gold)">${s.F?'F':''}${s.B?'B':''} only</span>`;
   });
 
-  const pairs = Object.values(SCAN_MAP).filter(s => s.F && s.B).length;
-  document.getElementById('scan-summary').textContent =
-    `${matched} scan files loaded · ${pairs} complete pairs (F+B) matched`;
+  let summary = `${matched} scan files loaded · ${pairs.length} complete pairs (F+B)`;
+  if (unpaired.length) summary += ` · ${unpaired.length} unpaired (${unpaired.join(', ')})`;
+  document.getElementById('scan-summary').textContent = summary;
 }
 
 // ── COMMIT ────────────────────────────────────────────────────────────────────
@@ -862,8 +876,8 @@ function clearAll() {
   document.getElementById('review-tbody').innerHTML = '';
   document.getElementById('verify-progress').textContent = '';
   document.getElementById('scan-summary').textContent = '';
+  document.getElementById('cert-section').setAttribute('hidden', '');
   document.getElementById('review-section').setAttribute('hidden', '');
-  document.getElementById('scan-section').setAttribute('hidden', '');
   document.getElementById('commit-section').setAttribute('hidden', '');
   document.getElementById('log-section').setAttribute('hidden', '');
   document.getElementById('log').innerHTML = '';
