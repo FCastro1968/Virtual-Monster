@@ -5941,6 +5941,27 @@ function openSubmissionInModal(player, back, s, isFinest) {
   }
 
   document.getElementById('smd-scan-grid').innerHTML = gridHTML;
+
+  // ── Flag button ──
+  const flagArea = document.getElementById('smd-flag-area');
+  const submissionId = s._submissionId || s.id || null;
+  if (submissionId && currentUser) {
+    const fid = `flag-${submissionId}`;
+    flagArea.innerHTML = `
+      <button class="flag-link" onclick="toggleFlagForm('${fid}')" style="font-size:0.7rem;">⚑ Flag Issue</button>
+      <div class="flag-form" id="${fid}" style="display:none;margin-top:0.6rem;">
+        <textarea placeholder="Describe the issue (wrong back, incorrect player, duplicate, etc.)…" rows="2"
+          style="width:100%;font-family:'Courier Prime',monospace;font-size:0.75rem;padding:0.5rem;border:1px solid var(--rule);background:var(--cream);color:var(--ink);resize:vertical;"></textarea>
+        <div class="flag-form-actions" style="margin-top:0.4rem;display:flex;gap:0.5rem;align-items:center;">
+          <button class="flag-submit-btn" onclick="submitFlag('${submissionId}', '${player.replace(/'/g,"\\'")}', '${back.replace(/'/g,"\\'")}')">Submit Flag →</button>
+          <button class="flag-cancel-btn" onclick="toggleFlagForm('${fid}')">Cancel</button>
+          <span class="flag-status" id="flag-status-${submissionId}"></span>
+        </div>
+      </div>`;
+  } else {
+    flagArea.innerHTML = '';
+  }
+
   document.getElementById('scan-modal-overlay').classList.add('open');
 }
 
@@ -9376,6 +9397,7 @@ async function loadRawFinestCount() {
       Submitted scans — <span id="smd-scan-count">0</span> on file
     </div>
     <div class="scan-grid" id="smd-scan-grid"></div>
+    <div id="smd-flag-area" style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--rule);"></div>
   </div>
 </div>
 
