@@ -6656,7 +6656,8 @@ function renderConfirmedFeed(count) {
     entry.style.cursor = 'pointer';
     entry.onclick = () => openSubmissionInModal(c.player, c.back, {
       g: c.grade, gr: c.grader, ct: c.cert, cl: c.submitter,
-      imgs: c.imgs || [], raw: false, dt: timeAgo(c.submittedAt || 0)
+      imgs: c.imgs || [], raw: false, dt: timeAgo(c.submittedAt || 0),
+      _submissionId: c._submissionId
     }, false);
     entry.innerHTML = `
       <div class="conf-date-col">
@@ -6709,7 +6710,8 @@ function renderAttestedList(count) {
     card.onclick = () => openSubmissionInModal(c.player, c.back, {
       g: null, gr: null, ct: null, cl: c.submitter,
       imgs: c.imgs || [], raw: true, notes: c.notes || '',
-      dt: timeAgo(c.submittedAt || 0)
+      dt: timeAgo(c.submittedAt || 0),
+      _submissionId: c._submissionId
     }, false);
     card.innerHTML = `
       <div class="attested-card-header">
