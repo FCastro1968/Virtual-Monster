@@ -249,9 +249,109 @@
   .log-warn { color: #c9922a; }
   .log-err  { color: #c47a6a; }
   .log-info { color: #8ab0c4; }
+
+  /* ── SCAN LIGHTBOX ── */
+  #scan-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,8,4,0.88);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 2rem;
+  }
+  #scan-lightbox.open { display: flex; }
+  .lightbox-scan {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    max-height: 90vh;
+  }
+  .lightbox-scan img {
+    max-height: calc(90vh - 2rem);
+    max-width: 42vw;
+    object-fit: contain;
+    border: 1px solid rgba(196,163,90,0.3);
+    display: block;
+  }
+  .lightbox-scan img.back-scan { cursor: crosshair; }
+  .lightbox-scan img.front-scan { cursor: zoom-in; }
+  .lightbox-label {
+    font-family: monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(196,163,90,0.7);
+  }
+  .lightbox-hint {
+    font-family: monospace;
+    font-size: 0.58rem;
+    color: rgba(196,163,90,0.4);
+    margin-top: 0.1rem;
+  }
+  #lightbox-close {
+    position: fixed;
+    top: 1rem;
+    right: 1.5rem;
+    font-family: monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(196,163,90,0.7);
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 1001;
+  }
+  #lightbox-close:hover { color: #c4a35a; }
+  #lightbox-cert {
+    position: fixed;
+    top: 1rem;
+    left: 1.5rem;
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: rgba(196,163,90,0.6);
+    z-index: 1001;
+  }
+  /* ── MAGNIFIER ── */
+  #import-magnifier {
+    position: fixed;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    border: 2px solid rgba(196,163,90,0.6);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+    pointer-events: none;
+    z-index: 1002;
+    display: none;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    background-color: #1a1208;
+  }
+  #import-magnifier.active { display: block; }
 </style>
 </head>
 <body>
+
+<!-- SCAN LIGHTBOX -->
+<div id="scan-lightbox" onclick="closeLightbox(event)">
+  <button id="lightbox-close" onclick="closeLightbox()">✕ Close</button>
+  <div id="lightbox-cert"></div>
+  <div class="lightbox-scan">
+    <img id="lb-front" class="front-scan" alt="Front" onclick="window.open(this.src,'_blank')">
+    <div class="lightbox-label">Front</div>
+    <div class="lightbox-hint">Click to open full size</div>
+  </div>
+  <div class="lightbox-scan">
+    <img id="lb-back" class="back-scan" alt="Back">
+    <div class="lightbox-label">Back</div>
+    <div class="lightbox-hint">Hover to magnify</div>
+  </div>
+</div>
+<div id="import-magnifier"></div>
 
 <!-- PASSWORD GATE -->
 <div id="gate">
@@ -613,7 +713,7 @@ function renderRow(idx) {
   const seriesWarn  = !row.series  ? ' warn' : '';
 
   const scanInfo = SCAN_MAP[row.cert]
-    ? `<span style="color:var(--forest)">F+B ✓</span>`
+    ? `<span style="color:var(--forest);cursor:pointer;text-decoration:underline;" onclick="openScanLightbox('${row.cert}')">F+B ✓ 🔍</span>`
     : `<span style="color:var(--text-muted)">—</span>`;
 
   let badgeClass = 'badge-warn', badgeLabel = 'Review';
@@ -740,7 +840,7 @@ function handleScanFiles(files) {
     const cell = document.getElementById(`scan-cell-${idx}`);
     if (!cell) return;
     const s = SCAN_MAP[row.cert];
-    if (s && s.F && s.B) cell.innerHTML = `<span style="color:var(--forest)">F+B ✓</span>`;
+    if (s && s.F && s.B) cell.innerHTML = `<span style="color:var(--forest);cursor:pointer;text-decoration:underline;" onclick="openScanLightbox('${row.cert}')">F+B ✓ 🔍</span>`;
     else if (s && (s.F || s.B)) cell.innerHTML = `<span style="color:var(--gold)">${s.F?'F':''}${s.B?'B':''} only</span>`;
   });
 
@@ -883,6 +983,83 @@ function clearAll() {
   document.getElementById('log').innerHTML = '';
   ROWS     = [];
   SCAN_MAP = {};
+}
+
+// ── SCAN LIGHTBOX ─────────────────────────────────────────────────────────────
+function openScanLightbox(cert) {
+  const scans = SCAN_MAP[cert];
+  if (!scans) return;
+
+  const lb = document.getElementById('scan-lightbox');
+  const frontImg = document.getElementById('lb-front');
+  const backImg  = document.getElementById('lb-back');
+
+  document.getElementById('lightbox-cert').textContent = `Cert #${cert}`;
+
+  if (scans.F) frontImg.src = URL.createObjectURL(scans.F);
+  if (scans.B) {
+    backImg.src = URL.createObjectURL(scans.B);
+    attachImportMagnifier(backImg);
+  }
+
+  lb.classList.add('open');
+}
+
+function closeLightbox(e) {
+  if (e && e.target !== document.getElementById('scan-lightbox') && e.target !== document.getElementById('lightbox-close')) return;
+  document.getElementById('scan-lightbox').classList.remove('open');
+  document.getElementById('import-magnifier').classList.remove('active');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('scan-lightbox').classList.remove('open');
+});
+
+// ── IMPORT MAGNIFIER ──────────────────────────────────────────────────────────
+const _imag      = document.getElementById('import-magnifier');
+const IMAG_SIZE  = 260;
+const IMAG_ZOOM  = 3.0;
+const IMAG_OFF   = 20;
+
+function attachImportMagnifier(img) {
+  if (img._iMagAttached) return;
+  img._iMagAttached = true;
+
+  img.addEventListener('mouseenter', () => _imag.classList.add('active'));
+  img.addEventListener('mouseleave', () => _imag.classList.remove('active'));
+  img.addEventListener('mousemove', e => {
+    const rect = img.getBoundingClientRect();
+    let rendW = rect.width, rendH = rect.height;
+    let rendX = rect.left,  rendY = rect.top;
+
+    if (img.naturalWidth && img.naturalHeight) {
+      const ir = img.naturalWidth / img.naturalHeight;
+      const br = rect.width / rect.height;
+      if (ir < br) { rendW = rect.height * ir; rendX = rect.left + (rect.width - rendW) / 2; }
+      else         { rendH = rect.width / ir;  rendY = rect.top  + (rect.height - rendH) / 2; }
+    }
+
+    const cx = Math.max(rendX, Math.min(e.clientX, rendX + rendW));
+    const cy = Math.max(rendY, Math.min(e.clientY, rendY + rendH));
+    const xR = (cx - rendX) / rendW;
+    const yR = (cy - rendY) / rendH;
+    const bgW = rendW * IMAG_ZOOM;
+    const bgH = rendH * IMAG_ZOOM;
+
+    _imag.style.backgroundImage    = `url('${img.src}')`;
+    _imag.style.backgroundSize     = `${bgW}px ${bgH}px`;
+    _imag.style.backgroundPosition = `${-(xR * bgW - IMAG_SIZE / 2)}px ${-(yR * bgH - IMAG_SIZE / 2)}px`;
+
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let lx = e.clientX + IMAG_OFF;
+    let ly = e.clientY - IMAG_SIZE / 2;
+    if (lx + IMAG_SIZE > vw - 10) lx = e.clientX - IMAG_SIZE - IMAG_OFF;
+    if (ly < 10)                   ly = 10;
+    if (ly + IMAG_SIZE > vh - 10)  ly = vh - IMAG_SIZE - 10;
+
+    _imag.style.left = lx + 'px';
+    _imag.style.top  = ly + 'px';
+  });
 }
 </script>
 </body>
