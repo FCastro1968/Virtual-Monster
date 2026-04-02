@@ -370,7 +370,7 @@
   <div class="section">
     <div class="section-title">Phase 1 — Drop Scans</div>
     <p style="font-family:monospace;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.75rem;">
-      Name files <strong>{cert}_F.jpg</strong> and <strong>{cert}_B.jpg</strong> — cert numbers will populate automatically.
+      Name files <strong>Gandil_F.jpg</strong> / <strong>Gandil_B.jpg</strong> — cert numbers extracted automatically via vision. Legacy numeric names (<strong>{cert}_F.jpg</strong>) also supported.
     </p>
     <div id="scan-drop" onclick="document.getElementById('scan-file-input').click()"
          ondragover="event.preventDefault();this.classList.add('drag-over')"
@@ -440,6 +440,7 @@ const IMPORT_PASSWORD = 'vm2024admin';
 const SUPABASE_URL    = 'https://visrbvpidnhbvpjsoxtf.supabase.co';
 const SUPABASE_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpc3JidnBpZG5oYnZwanNveHRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NDQ2ODUsImV4cCI6MjA4OTEyMDY4NX0.8qkEhZwNfRDoDHHmdbUsastLINXKlZpC7iQ0Tpobha0';
 const ADMIN_USER_ID   = '76692342-d56a-49db-a3e9-c0551188f57e';
+const ANTHROPIC_KEY   = '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';
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -804,28 +805,75 @@ function toggleSelectAll(checked) {
 }
 
 // ── SCAN FILES ────────────────────────────────────────────────────────────────
-function handleScanDrop(e) {
+async function handleScanDrop(e) {
   e.preventDefault();
   document.getElementById('scan-drop').classList.remove('drag-over');
   const files = e.dataTransfer.files;
-  handleScanFiles(files);
+  await handleScanFiles(files);
 }
 
-function handleScanFiles(files) {
+async function handleScanFiles(files) {
+  // First pass: sort files into numeric (instant) and named (need vision)
+  const namedFronts = []; // { file, stem } — need vision extraction
   let matched = 0;
+
   for (const file of files) {
     const name = file.name;
-    const m    = name.match(/^(\d+)_(F|B)\./i);
-    if (!m) continue;
-    const cert = m[1];
-    const side = m[2].toUpperCase();
-    if (!SCAN_MAP[cert]) SCAN_MAP[cert] = {};
-    SCAN_MAP[cert][side] = file;
+    // Numeric cert in filename: 97824898_F.jpg — use as before
+    const numericMatch = name.match(/^(\d+)_(F|B)\./i);
+    if (numericMatch) {
+      const cert = numericMatch[1];
+      const side = numericMatch[2].toUpperCase();
+      if (!SCAN_MAP[cert]) SCAN_MAP[cert] = {};
+      SCAN_MAP[cert][side] = file;
+      matched++;
+      continue;
+    }
+    // Named file: Gandil_F.jpg or Gandil_B.jpg
+    const namedMatch = name.match(/^(.+)_(F|B)\./i);
+    if (!namedMatch) continue;
+    const stem = namedMatch[1];
+    const side = namedMatch[2].toUpperCase();
+    if (!SCAN_MAP[`__named__${stem}`]) SCAN_MAP[`__named__${stem}`] = {};
+    SCAN_MAP[`__named__${stem}`][side] = file;
+    if (side === 'F') namedFronts.push({ file, stem });
     matched++;
   }
 
+  // If we have named fronts, run vision extraction
+  if (namedFronts.length > 0) {
+    const summaryEl = document.getElementById('scan-summary');
+    summaryEl.textContent = `Running vision extraction on ${namedFronts.length} front scan(s)…`;
+
+    for (let i = 0; i < namedFronts.length; i++) {
+      const { file, stem } = namedFronts[i];
+      summaryEl.textContent = `Vision extraction ${i + 1} / ${namedFronts.length}: ${file.name}…`;
+
+      const cert = await extractCertViaVision(file);
+      const namedKey = `__named__${stem}`;
+      const namedEntry = SCAN_MAP[namedKey];
+
+      if (cert && namedEntry) {
+        // Move from named key to cert key
+        if (!SCAN_MAP[cert]) SCAN_MAP[cert] = {};
+        if (namedEntry.F) SCAN_MAP[cert].F = namedEntry.F;
+        if (namedEntry.B) SCAN_MAP[cert].B = namedEntry.B;
+        delete SCAN_MAP[namedKey];
+      } else {
+        // Vision failed — leave under stem so user can see it as unpaired
+        summaryEl.textContent += ` ⚠ Could not extract cert from ${file.name}`;
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+  }
+
+  // Remove any leftover __named__ temp keys that didn't get resolved
+  for (const key of Object.keys(SCAN_MAP)) {
+    if (key.startsWith('__named__')) delete SCAN_MAP[key];
+  }
+
   // Auto-populate cert textarea from paired scans
-  const pairs = Object.entries(SCAN_MAP).filter(([, s]) => s.F && s.B).map(([cert]) => cert);
+  const pairs    = Object.entries(SCAN_MAP).filter(([, s]) => s.F && s.B).map(([cert]) => cert);
   const unpaired = Object.entries(SCAN_MAP).filter(([, s]) => !(s.F && s.B)).map(([cert]) => cert);
 
   if (pairs.length > 0) {
@@ -845,8 +893,56 @@ function handleScanFiles(files) {
   });
 
   let summary = `${matched} scan files loaded · ${pairs.length} complete pairs (F+B)`;
-  if (unpaired.length) summary += ` · ${unpaired.length} unpaired (${unpaired.join(', ')})`;
+  if (unpaired.length) summary += ` · ${unpaired.length} unpaired`;
   document.getElementById('scan-summary').textContent = summary;
+}
+
+async function extractCertViaVision(file) {
+  try {
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload  = () => res(reader.result.split(',')[1]);
+      reader.onerror = () => rej(new Error('File read failed'));
+      reader.readAsDataURL(file);
+    });
+
+    const mediaType = file.type || 'image/jpeg';
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type':         'application/json',
+        'x-api-key':            ANTHROPIC_KEY,
+        'anthropic-version':    '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model:      'claude-haiku-4-5-20251001',
+        max_tokens: 64,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: base64 }
+            },
+            {
+              type: 'text',
+              text: 'This is a PSA graded card holder. Find the PSA certification number (cert number) printed on the label — it is typically an 8-digit number. Reply with ONLY the cert number digits, nothing else. If you cannot find it, reply with the single word NONE.'
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = (data?.content?.[0]?.text || '').trim();
+    // Must be 6–10 digits, nothing else
+    return /^\d{6,10}$/.test(text) ? text : null;
+  } catch(e) {
+    console.error('Vision extraction failed:', e);
+    return null;
+  }
 }
 
 // ── COMMIT ────────────────────────────────────────────────────────────────────
