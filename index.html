@@ -2685,12 +2685,17 @@
   .scan-modal {
     background: var(--parchment);
     border: 1px solid var(--rule);
-    max-width: 640px;
+    max-width: 680px;
     width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 1.8rem 2rem;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    padding: 1.8rem 2rem 1.2rem;
     position: relative;
+    overflow: hidden;
+  }
+  .scan-modal-header {
+    flex-shrink: 0;
   }
   .scan-modal-close {
     position: absolute;
@@ -2758,14 +2763,18 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 1rem;
-    margin-bottom: 1.2rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 0.5rem;
   }
   .scan-grid > div {
-    width: 200px;
-    flex-shrink: 0;
+    flex: 1 1 180px;
+    max-width: 220px;
+    min-width: 140px;
   }
   .scan-placeholder {
-    width: 200px;
+    width: 100%;
     aspect-ratio: 3/4.2;
     background: var(--cream);
     border: 1px solid var(--rule);
@@ -2782,7 +2791,7 @@
     opacity: 0.5;
   }
   .scan-img {
-    width: 200px;
+    width: 100%;
     aspect-ratio: 3/4.2;
     object-fit: cover;
     border: 1px solid var(--rule);
@@ -9387,19 +9396,21 @@ async function loadRawFinestCount() {
 <div class="scan-modal-overlay" id="scan-modal-overlay" onclick="closeScanModal(event)">
   <div class="scan-modal" role="dialog" aria-modal="true">
     <button class="scan-modal-close" onclick="closeScanModal()">✕ Close</button>
-    <div class="scan-modal-title" id="smd-player">—</div>
-    <div class="scan-modal-sub" id="smd-back">—</div>
-    <div class="scan-modal-meta">
-      <div class="scan-modal-meta-item"><label>Submitted by</label><value id="smd-submitter">—</value></div>
-      <div class="scan-modal-meta-item"><label>Submitted</label><value id="smd-date">—</value></div>
-      <div class="scan-modal-meta-item"><label>Community score</label><value id="smd-score">—</value></div>
-    </div>
-    <div class="scan-modal-notes" id="smd-notes"></div>
-    <div style="font-family:'Courier Prime',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.75rem;">
-      Submitted scans — <span id="smd-scan-count">0</span> on file
+    <div class="scan-modal-header">
+      <div class="scan-modal-title" id="smd-player">—</div>
+      <div class="scan-modal-sub" id="smd-back">—</div>
+      <div class="scan-modal-meta">
+        <div class="scan-modal-meta-item"><label>Submitted by</label><value id="smd-submitter">—</value></div>
+        <div class="scan-modal-meta-item"><label>Submitted</label><value id="smd-date">—</value></div>
+        <div class="scan-modal-meta-item"><label>Community score</label><value id="smd-score">—</value></div>
+      </div>
+      <div class="scan-modal-notes" id="smd-notes"></div>
+      <div style="font-family:'Courier Prime',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:0.75rem;">
+        Submitted scans — <span id="smd-scan-count">0</span> on file
+      </div>
     </div>
     <div class="scan-grid" id="smd-scan-grid"></div>
-    <div id="smd-flag-area" style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--rule);"></div>
+    <div id="smd-flag-area" style="flex-shrink:0;padding-top:0.75rem;border-top:1px solid var(--rule);margin-top:0.5rem;"></div>
   </div>
 </div>
 
