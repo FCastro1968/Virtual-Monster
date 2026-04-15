@@ -2591,6 +2591,32 @@
     padding: 0.1rem 0.4rem;
     white-space: nowrap;
   }
+  .finest-new-badge {
+    display: inline-block;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    background: #7a5c00;
+    color: #fdf3d0;
+    padding: 0.15rem 0.45rem;
+    white-space: nowrap;
+    border: 1px solid #a07a10;
+    margin-top: 0.25rem;
+  }
+  .finest-upgrade-badge {
+    display: inline-block;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    background: #1a4a3a;
+    color: #d4f0e4;
+    padding: 0.15rem 0.45rem;
+    white-space: nowrap;
+    border: 1px solid #2d7a5a;
+    margin-top: 0.25rem;
+  }
 
   /* ── ATTESTED CARDS ── */
   .attested-list {
@@ -5122,6 +5148,58 @@ async function adminDecide(submissionId, newStatus, queue) {
       if (m) updatePayload.grade_numeric = parseFloat(m[0]);
     }
 
+    // ── Compute finest_status_at_submission for newly confirmed/attested rows ──
+    // (covers guest_pending → confirmed/attested and any pending → confirmed)
+    if (newStatus === 'confirmed' || newStatus === 'attested') {
+      // Fetch the submission to get combination_id, is_graded, and grade_numeric
+      const { data: sub } = await db
+        .from('submissions')
+        .select('combination_id, is_graded, grade_numeric, grade')
+        .eq('id', submissionId)
+        .single();
+
+      if (sub) {
+        const gradeNum = updatePayload.grade_numeric ?? sub.grade_numeric ??
+          (() => { const g = sub.grade; if (!g) return null; const n = gradeToNum(g); return n >= 0 ? n : null; })();
+
+        let wasFinest    = false;
+        let finestStatus = null;
+
+        if (!sub.is_graded) {
+          // Raw: 'new' if no prior confirmed/attested raw exists for this combo
+          const { count } = await db
+            .from('submissions')
+            .select('id', { count: 'exact', head: true })
+            .eq('combination_id', sub.combination_id)
+            .eq('is_graded', false)
+            .in('status', ['attested', 'confirmed'])
+            .neq('id', submissionId);
+          if ((count || 0) === 0) { wasFinest = true; finestStatus = 'new'; }
+        } else if (gradeNum != null) {
+          // Graded: compare against current confirmed finest for this combo
+          const { data: best } = await db
+            .from('submissions')
+            .select('grade_numeric')
+            .eq('combination_id', sub.combination_id)
+            .eq('is_graded', true)
+            .eq('status', 'confirmed')
+            .not('grade_numeric', 'is', null)
+            .neq('id', submissionId)
+            .order('grade_numeric', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!best) { wasFinest = true; finestStatus = 'new'; }
+          else if (gradeNum > best.grade_numeric) { wasFinest = true; finestStatus = 'upgrade'; }
+        }
+
+        if (wasFinest) {
+          updatePayload.was_finest_at_submission    = true;
+          updatePayload.finest_status_at_submission = finestStatus;
+        }
+      }
+    }
+
     const { error } = await db
       .from('submissions')
       .update(updatePayload)
@@ -5159,7 +5237,7 @@ async function adminDecide(submissionId, newStatus, queue) {
     }
 
   } catch (err) {
-    card.querySelectorAll('.admin-btn').forEach(b => { b.disabled = false; });
+    if (card) card.querySelectorAll('.admin-btn').forEach(b => { b.disabled = false; });
     alert('Error updating submission: ' + err.message);
   }
 }
@@ -6678,6 +6756,8 @@ function renderConfirmedFeed(count) {
         ${c.isNew ? '<span class="conf-new-badge">New Combo</span>' : ''}
         <span class="conf-grade">${escapeHtml(c.grade || '')}</span>
         <span class="conf-grader">${escapeHtml(c.grader || '')}</span>
+        ${c.finestStatus === 'new'     ? '<span class="finest-new-badge">🏆 Known Finest (New)</span>' : ''}
+        ${c.finestStatus === 'upgrade' ? '<span class="finest-upgrade-badge">⬆ Known Finest (Upgrade)</span>' : ''}
       </div>
     `;
     feed.appendChild(entry);
@@ -6724,7 +6804,11 @@ function renderAttestedList(count) {
           <div class="attested-player">${c.player}</div>
           <div class="attested-back">${c.back}</div>
         </div>
-        <span class="attested-status-tag">Attested · Raw</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
+          <span class="attested-status-tag">Attested · Raw</span>
+          ${c.finestStatus === 'new'     ? '<span class="finest-new-badge">🏆 Known Finest (New)</span>' : ''}
+          ${c.finestStatus === 'upgrade' ? '<span class="finest-upgrade-badge">⬆ Known Finest (Upgrade)</span>' : ''}
+        </div>
       </div>
       <div class="attested-meta">
         <span class="attested-submitter">Submitted by <strong>${escapeHtml(c.submitter || '')}</strong> · ${timeAgo(c.submittedAt || 0)}</span>
@@ -6878,6 +6962,7 @@ async function loadRecentConfirmedFromSupabase(fromOffset = 0) {
       .from('submissions')
       .select(`
         id, grade, grader, cert_number, submitted_at, status, guest_handle,
+        finest_status_at_submission,
         users!submitted_by ( handle ),
         combinations (
           id, is_new_discovery,
@@ -6915,6 +7000,7 @@ async function loadRecentConfirmedFromSupabase(fromOffset = 0) {
         daysAgo,
         submittedAt: new Date(s.submitted_at).getTime(),
         isNew:     s.combinations?.is_new_discovery || false,
+        finestStatus: s.finest_status_at_submission || null,
         _submissionId: s.id,
         imgs,
       };
@@ -6942,6 +7028,7 @@ async function loadAttestedFromSupabase(fromOffset = 0) {
       .from('submissions')
       .select(`
         id, raw_notes, submitted_at, guest_handle,
+        finest_status_at_submission,
         users!submitted_by ( handle ),
         combinations (
           players ( name ),
@@ -6979,6 +7066,7 @@ async function loadAttestedFromSupabase(fromOffset = 0) {
         userVote:  0,
         notes:     s.raw_notes || '',
         scans:     s.scans?.length || 0,
+        finestStatus: s.finest_status_at_submission || null,
         _submissionId: s.id,
         imgs,
       };
@@ -7660,6 +7748,9 @@ async function submitCardAsGuest(bypassScanCheck) {
     }
 
     // Step 3: Insert submission row with status='guest_pending', submitted_by=null
+    // Note: was_finest_at_submission / finest_status_at_submission are computed
+    // at admin decision time (adminDecide) when guest_pending → confirmed/attested,
+    // since we don't know the final status until then.
     const isRaw  = document.getElementById('grading-select').value === 'RAW';
     const grade  = document.getElementById('grade-input')?.value?.trim() || null;
 
@@ -7890,6 +7981,57 @@ async function submitCard(bypassScanCheck) {
     const grade    = document.getElementById('grade-input')?.value?.trim() || null;
     const status   = verifiedData?.manualVerification ? 'pending' : (isRaw ? 'attested' : 'confirmed');
 
+    const gradeNum = (() => {
+      if (verifiedData?.gradeNumeric != null) return verifiedData.gradeNumeric;
+      const g = grade || verifiedData?.grade;
+      if (!g) return null;
+      const n = gradeToNum(g);
+      return n >= 0 ? n : null;
+    })();
+
+    // ── Pre-insert: determine finest status at submission time ────────────
+    let wasFinest    = false;
+    let finestStatus = null;
+
+    // Only compute for non-pending (confirmed/attested) submissions
+    if (status === 'confirmed' || status === 'attested') {
+      if (isRaw) {
+        // For raw: 'new' if no prior raw submission exists for this combo
+        const { count } = await db
+          .from('submissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('combination_id', combo.id)
+          .eq('is_graded', false)
+          .in('status', ['attested', 'confirmed']);
+        if ((count || 0) === 0) {
+          wasFinest    = true;
+          finestStatus = 'new';
+        }
+      } else if (gradeNum != null) {
+        // For graded: compare against current finest grade for this combo
+        const { data: existingBest } = await db
+          .from('submissions')
+          .select('grade_numeric')
+          .eq('combination_id', combo.id)
+          .eq('is_graded', true)
+          .eq('status', 'confirmed')
+          .not('grade_numeric', 'is', null)
+          .order('grade_numeric', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!existingBest) {
+          // No prior graded submission — this is the first known
+          wasFinest    = true;
+          finestStatus = 'new';
+        } else if (gradeNum > existingBest.grade_numeric) {
+          // Beats the existing finest — upgrade
+          wasFinest    = true;
+          finestStatus = 'upgrade';
+        }
+      }
+    }
+
     const submissionPayload = {
       combination_id:   combo.id,
       submitted_by:     currentUser.id,
@@ -7897,20 +8039,13 @@ async function submitCard(bypassScanCheck) {
       grader:           isRaw ? null : (verifiedData?.company || null),
       cert_number:      isRaw ? null : (verifiedData?.cert || null),
       grade:            grade || null,
-      // Prefer gradeNumeric from the registry service; fall back to
-      // parsing the grade string directly so this is never null for
-      // a valid graded submission (which would exclude it from the trigger).
-      grade_numeric: (() => {
-        if (verifiedData?.gradeNumeric != null) return verifiedData.gradeNumeric;
-        const g = grade || verifiedData?.grade;
-        if (!g) return null;
-        const n = gradeToNum(g);
-        return n >= 0 ? n : null;
-      })(),
+      grade_numeric:    gradeNum,
       status,
       cert_verified_at: (!isRaw && !verifiedData?.manualVerification) ? new Date().toISOString() : null,
       cert_data:        verifiedData ? JSON.stringify(verifiedData) : null,
       raw_notes:        notes || null,
+      was_finest_at_submission:    wasFinest,
+      finest_status_at_submission: finestStatus,
     };
 
     const { data: submission, error: subErr } = await db
