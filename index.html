@@ -3238,7 +3238,7 @@
     <button class="nav-btn" onclick="showSection('forum', this)">Forum</button>
     <button class="nav-btn" onclick="showSection('submit', this)">Submit a Card</button>
     <button class="nav-btn" onclick="showSection('about', this)">About &amp; Policies</button>
-    <button class="nav-btn" id="admin-nav-btn" style="display:none;color:var(--rust);" onclick="showSection('admin', this)">Admin ⚑</button>
+    <button class="nav-btn" id="admin-nav-btn" style="display:none;color:var(--rust);position:relative;" onclick="showSection('admin', this)">Admin ⚑<span id="admin-nav-badge" style="display:none;position:absolute;top:-5px;right:-10px;background:var(--rust);color:var(--cream);font-family:'Courier Prime',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.03em;padding:0.1rem 0.35rem;border-radius:2px;line-height:1.4;pointer-events:none;"></span></button>
   </nav>
 </header>
 
@@ -4654,13 +4654,51 @@ async function checkAdminStatus(user) {
     if (currentUser) currentUser._isAdmin = !!data?.is_admin;
     const btn = document.getElementById('admin-nav-btn');
     if (btn) btn.style.display = (currentUser?._isAdmin) ? '' : 'none';
+    // Pre-fetch queue counts so the nav badge is populated immediately
+    if (currentUser?._isAdmin) loadAdminQueueCounts();
   } catch (e) {
     if (currentUser) currentUser._isAdmin = false;
   }
 }
 
+// Lightweight count-only fetch — updates the nav badge without rendering queue cards
+async function loadAdminQueueCounts() {
+  try {
+    const [pendingRes, guestRes, flagsRes] = await Promise.all([
+      db.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      db.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'guest_pending'),
+      db.from('issue_flags').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+    ]);
+    const pendingEl = document.getElementById('admin-pending-count');
+    const guestEl   = document.getElementById('admin-guest-count');
+    const issuesEl  = document.getElementById('admin-issues-count');
+    if (pendingEl) pendingEl.textContent = pendingRes.count ?? 0;
+    if (guestEl)   guestEl.textContent   = guestRes.count   ?? 0;
+    if (issuesEl)  issuesEl.textContent  = flagsRes.count   ?? 0;
+    updateAdminNavBadge();
+  } catch (e) {
+    // Non-fatal — badge just won't show until admin opens the queue
+  }
+}
+
 async function loadAdminQueues() {
   await Promise.all([loadAllSubmissions(), loadPendingSubmissions(), loadIssueFlags(), loadGuestSubmissions()]);
+  updateAdminNavBadge();
+}
+
+function updateAdminNavBadge() {
+  const pending = parseInt(document.getElementById('admin-pending-count')?.textContent || '0', 10);
+  const guest   = parseInt(document.getElementById('admin-guest-count')?.textContent   || '0', 10);
+  const issues  = parseInt(document.getElementById('admin-issues-count')?.textContent  || '0', 10);
+  const total   = pending + guest + issues;
+  const badge   = document.getElementById('admin-nav-badge');
+  if (!badge) return;
+  if (total > 0) {
+    badge.textContent = total;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 // ── All Submissions — Delete queue ───────────────────────────────────────────
@@ -5221,6 +5259,7 @@ async function adminDecide(submissionId, newStatus, queue) {
                   :                       'admin-issues-count';
     const countEl = document.getElementById(countId);
     if (countEl && queue !== 'flagged') countEl.textContent = Math.max(0, parseInt(countEl.textContent || '0') - 1);
+    updateAdminNavBadge();
 
     // Refresh checklist and feeds to reflect the status change
     if (newStatus === 'confirmed' || newStatus === 'attested') {
