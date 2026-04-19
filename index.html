@@ -6831,7 +6831,9 @@ function renderConfirmedFeed(count) {
     entry.onclick = () => openSubmissionInModal(c.player, c.back, {
       g: c.grade, gr: c.grader, ct: c.cert, cl: c.submitter,
       imgs: c.imgs || [], raw: false, dt: timeAgo(c.submittedAt || 0),
-      _submissionId: c._submissionId
+      _submissionId: c._submissionId,
+      isCombined: c.isCombined || false,
+      imgLabels:  c.imgLabels  || [],
     }, false);
     entry.innerHTML = `
       <div class="conf-date-col">
@@ -6887,7 +6889,9 @@ function renderAttestedList(count) {
       g: null, gr: null, ct: null, cl: c.submitter,
       imgs: c.imgs || [], raw: true, notes: c.notes || '',
       dt: timeAgo(c.submittedAt || 0),
-      _submissionId: c._submissionId
+      _submissionId: c._submissionId,
+      isCombined: c.isCombined || false,
+      imgLabels:  c.imgLabels  || [],
     }, false);
     card.innerHTML = `
       <div class="attested-card-header">
