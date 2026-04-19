@@ -340,15 +340,28 @@
 <div id="scan-lightbox" onclick="closeLightbox(event)">
   <button id="lightbox-close" onclick="closeLightbox()">✕ Close</button>
   <div id="lightbox-cert"></div>
-  <div class="lightbox-scan">
-    <img id="lb-front" class="front-scan" alt="Front" onclick="window.open(this.src,'_blank')">
-    <div class="lightbox-label">Front</div>
-    <div class="lightbox-hint">Click to open full size</div>
+  <!-- Split mode: F + B side by side -->
+  <div id="lb-split-mode" style="display:flex;gap:2rem;align-items:flex-start;">
+    <div class="lightbox-scan">
+      <img id="lb-front" class="front-scan" alt="Front" onclick="window.open(this.src,'_blank')">
+      <div class="lightbox-label">Front</div>
+      <div class="lightbox-hint">Click to open full size</div>
+    </div>
+    <div class="lightbox-scan">
+      <img id="lb-back" class="back-scan" alt="Back">
+      <div class="lightbox-label">Back</div>
+      <div class="lightbox-hint">Hover to magnify</div>
+    </div>
   </div>
-  <div class="lightbox-scan">
-    <img id="lb-back" class="back-scan" alt="Back">
-    <div class="lightbox-label">Back</div>
-    <div class="lightbox-hint">Hover to magnify</div>
+  <!-- Combined mode: single image full width -->
+  <div id="lb-combined-mode" style="display:none;flex-direction:column;align-items:center;gap:0.5rem;">
+    <div class="lightbox-scan" style="max-width:80vw;">
+      <img id="lb-combined" class="front-scan" alt="Front+Back Combined"
+           style="max-height:85vh;max-width:80vw;object-fit:contain;"
+           onclick="window.open(this.src,'_blank')">
+      <div class="lightbox-label">Front + Back (Combined Scan)</div>
+      <div class="lightbox-hint">Click to open full size</div>
+    </div>
   </div>
 </div>
 <div id="import-magnifier"></div>
@@ -370,7 +383,9 @@
   <div class="section">
     <div class="section-title">Phase 1 — Drop Scans</div>
     <p style="font-family:monospace;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.75rem;">
-      Name files <strong>Gandil_F.jpg</strong> / <strong>Gandil_B.jpg</strong> — cert numbers extracted automatically via vision. Legacy numeric names (<strong>{cert}_F.jpg</strong>) also supported.
+      Separate scans: <strong>Gandil_F.jpg</strong> + <strong>Gandil_B.jpg</strong> &nbsp;|&nbsp;
+      Combined scan: <strong>Gandil_FB.jpg</strong> (front &amp; back in one image) &nbsp;|&nbsp;
+      Numeric cert names also supported: <strong>{cert}_F.jpg</strong> / <strong>{cert}_B.jpg</strong> / <strong>{cert}_FB.jpg</strong>
     </p>
     <div id="scan-drop" onclick="document.getElementById('scan-file-input').click()"
          ondragover="event.preventDefault();this.classList.add('drag-over')"
@@ -727,7 +742,9 @@ function renderRow(idx) {
   const seriesWarn  = !row.series  ? ' warn' : '';
 
   const scanInfo = SCAN_MAP[row.cert]
-    ? `<span style="color:var(--forest);cursor:pointer;text-decoration:underline;" onclick="openScanLightbox('${row.cert}')">F+B ✓ 🔍</span>`
+    ? SCAN_MAP[row.cert].C
+      ? `<span style="color:var(--forest);cursor:pointer;text-decoration:underline;" onclick="openScanLightbox('${row.cert}')">Combined ✓ 🔍</span>`
+      : `<span style="color:var(--forest);cursor:pointer;text-decoration:underline;" onclick="openScanLightbox('${row.cert}')">F+B ✓ 🔍</span>`
     : `<span style="color:var(--text-muted)">—</span>`;
 
   let badgeClass = 'badge-warn', badgeLabel = 'Review';
@@ -830,7 +847,18 @@ async function handleScanFiles(files) {
 
   for (const file of files) {
     const name = file.name;
-    // Numeric cert in filename: 97824898_F.jpg — instant, no vision needed
+
+    // ── Combined scan: numeric cert ── {cert}_FB.jpg or {cert}_C.jpg or {cert}_Combined.jpg
+    const numericCombinedMatch = name.match(/^(\d+)_(FB|C|Combined)\./i);
+    if (numericCombinedMatch) {
+      const cert = numericCombinedMatch[1];
+      if (!SCAN_MAP[cert]) SCAN_MAP[cert] = {};
+      SCAN_MAP[cert].C = file;
+      matched++;
+      continue;
+    }
+
+    // ── Separate scans: numeric cert ── {cert}_F.jpg / {cert}_B.jpg
     const numericMatch = name.match(/^(\d+)_(F|B)\./i);
     if (numericMatch) {
       const cert = numericMatch[1];
@@ -840,21 +868,33 @@ async function handleScanFiles(files) {
       matched++;
       continue;
     }
-    // Named file: Gandil_F.jpg — queue front for vision extraction
+
+    // ── Combined scan: named ── Gandil_FB.jpg or Gandil_C.jpg
+    const namedCombinedMatch = name.match(/^(.+)_(FB|C|Combined)\./i);
+    if (namedCombinedMatch) {
+      const stem = namedCombinedMatch[1];
+      if (!SCAN_MAP[`__named__${stem}`]) SCAN_MAP[`__named__${stem}`] = {};
+      SCAN_MAP[`__named__${stem}`].C = file;
+      namedFronts.push({ file, stem, combined: true });
+      matched++;
+      continue;
+    }
+
+    // ── Separate scans: named ── Gandil_F.jpg / Gandil_B.jpg
     const namedMatch = name.match(/^(.+)_(F|B)\./i);
     if (!namedMatch) continue;
     const stem = namedMatch[1];
     const side = namedMatch[2].toUpperCase();
     if (!SCAN_MAP[`__named__${stem}`]) SCAN_MAP[`__named__${stem}`] = {};
     SCAN_MAP[`__named__${stem}`][side] = file;
-    if (side === 'F') namedFronts.push({ file, stem });
+    if (side === 'F') namedFronts.push({ file, stem, combined: false });
     matched++;
   }
 
-  // Vision extraction for named files
+  // Vision extraction for named files (both combined and separate fronts)
   if (namedFronts.length > 0) {
     const summaryEl = document.getElementById('scan-summary');
-    summaryEl.textContent = `Running vision extraction on ${namedFronts.length} front scan(s)…`;
+    summaryEl.textContent = `Running vision extraction on ${namedFronts.length} scan(s)…`;
 
     for (let i = 0; i < namedFronts.length; i++) {
       const { file, stem } = namedFronts[i];
@@ -868,6 +908,7 @@ async function handleScanFiles(files) {
         if (!SCAN_MAP[cert]) SCAN_MAP[cert] = {};
         if (namedEntry.F) SCAN_MAP[cert].F = namedEntry.F;
         if (namedEntry.B) SCAN_MAP[cert].B = namedEntry.B;
+        if (namedEntry.C) SCAN_MAP[cert].C = namedEntry.C;
         delete SCAN_MAP[namedKey];
       } else {
         summaryEl.textContent = `⚠ Could not extract cert from ${file.name} — add manually`;
@@ -881,8 +922,9 @@ async function handleScanFiles(files) {
     if (key.startsWith('__named__')) delete SCAN_MAP[key];
   }
 
-  const pairs    = Object.entries(SCAN_MAP).filter(([, s]) => s.F && s.B).map(([cert]) => cert);
-  const unpaired = Object.entries(SCAN_MAP).filter(([, s]) => !(s.F && s.B)).map(([cert]) => cert);
+  // A cert is "complete" if it has F+B OR a combined C scan
+  const pairs    = Object.entries(SCAN_MAP).filter(([, s]) => (s.F && s.B) || s.C).map(([cert]) => cert);
+  const unpaired = Object.entries(SCAN_MAP).filter(([, s]) => !((s.F && s.B) || s.C)).map(([cert]) => cert);
 
   if (pairs.length > 0) {
     document.getElementById('cert-textarea').value = pairs.join('\n');
@@ -895,11 +937,18 @@ async function handleScanFiles(files) {
     const cell = document.getElementById(`scan-cell-${idx}`);
     if (!cell) return;
     const s = SCAN_MAP[row.cert];
-    if (s && s.F && s.B) cell.innerHTML = `<span style="color:var(--forest);cursor:pointer;text-decoration:underline;" onclick="openScanLightbox('${row.cert}')">F+B ✓ 🔍</span>`;
+    if (s && s.C)        cell.innerHTML = `<span style="color:var(--forest);cursor:pointer;text-decoration:underline;" onclick="openScanLightbox('${row.cert}')">Combined ✓ 🔍</span>`;
+    else if (s && s.F && s.B) cell.innerHTML = `<span style="color:var(--forest);cursor:pointer;text-decoration:underline;" onclick="openScanLightbox('${row.cert}')">F+B ✓ 🔍</span>`;
     else if (s && (s.F || s.B)) cell.innerHTML = `<span style="color:var(--gold)">${s.F?'F':''}${s.B?'B':''} only</span>`;
   });
 
-  let summary = `${matched} scan files loaded · ${pairs.length} complete pairs (F+B)`;
+  let summary = `${matched} scan files loaded · ${pairs.length} complete (`;
+  const combCount = Object.values(SCAN_MAP).filter(s => s.C).length;
+  const splitCount = Object.values(SCAN_MAP).filter(s => s.F && s.B).length;
+  if (combCount)  summary += `${combCount} combined`;
+  if (combCount && splitCount) summary += ', ';
+  if (splitCount) summary += `${splitCount} F+B pairs`;
+  summary += ')';
   if (unpaired.length) summary += ` · ${unpaired.length} unpaired`;
   document.getElementById('scan-summary').textContent = summary;
 }
@@ -1013,16 +1062,28 @@ async function commitSelected() {
       const scans = SCAN_MAP[row.cert];
       const scanRecords = [];
       if (scans) {
-        const sides = [['F', 'Front', 0], ['B', 'Back', 1]];
-        for (const [key, label, order] of sides) {
-          if (!scans[key]) continue;
-          const file = scans[key];
+        if (scans.C) {
+          // Combined scan — single image covers front + back
+          const file = scans.C;
           const ext  = file.name.split('.').pop().toLowerCase();
-          const path = `${ADMIN_USER_ID}/${sub.id}/${order}-${Date.now()}.${ext}`;
+          const path = `${ADMIN_USER_ID}/${sub.id}/0-${Date.now()}.${ext}`;
           const { error: upErr } = await db.storage.from('scans')
             .upload(path, file, { contentType: file.type, upsert: false });
-          if (upErr) { log(`  ↳ Scan upload failed (${label}): ${upErr.message}`, 'warn'); continue; }
-          scanRecords.push({ submission_id: sub.id, storage_path: path, label, sort_order: order });
+          if (upErr) { log(`  ↳ Scan upload failed (Combined): ${upErr.message}`, 'warn'); }
+          else { scanRecords.push({ submission_id: sub.id, storage_path: path, label: 'Front+Back (Combined)', sort_order: 0 }); }
+        } else {
+          // Separate front + back scans
+          const sides = [['F', 'Front', 0], ['B', 'Back', 1]];
+          for (const [key, label, order] of sides) {
+            if (!scans[key]) continue;
+            const file = scans[key];
+            const ext  = file.name.split('.').pop().toLowerCase();
+            const path = `${ADMIN_USER_ID}/${sub.id}/${order}-${Date.now()}.${ext}`;
+            const { error: upErr } = await db.storage.from('scans')
+              .upload(path, file, { contentType: file.type, upsert: false });
+            if (upErr) { log(`  ↳ Scan upload failed (${label}): ${upErr.message}`, 'warn'); continue; }
+            scanRecords.push({ submission_id: sub.id, storage_path: path, label, sort_order: order });
+          }
         }
         if (scanRecords.length) {
           const { error: scanErr } = await db.from('scans').insert(scanRecords);
@@ -1084,16 +1145,28 @@ function openScanLightbox(cert) {
   const scans = SCAN_MAP[cert];
   if (!scans) return;
 
-  const lb = document.getElementById('scan-lightbox');
-  const frontImg = document.getElementById('lb-front');
-  const backImg  = document.getElementById('lb-back');
+  const lb          = document.getElementById('scan-lightbox');
+  const splitMode   = document.getElementById('lb-split-mode');
+  const combinedMode = document.getElementById('lb-combined-mode');
 
   document.getElementById('lightbox-cert').textContent = `Cert #${cert}`;
 
-  if (scans.F) frontImg.src = URL.createObjectURL(scans.F);
-  if (scans.B) {
-    backImg.src = URL.createObjectURL(scans.B);
-    attachImportMagnifier(backImg);
+  if (scans.C) {
+    // Combined scan mode
+    splitMode.style.display    = 'none';
+    combinedMode.style.display = 'flex';
+    document.getElementById('lb-combined').src = URL.createObjectURL(scans.C);
+  } else {
+    // Separate front + back mode
+    splitMode.style.display    = 'flex';
+    combinedMode.style.display = 'none';
+    const frontImg = document.getElementById('lb-front');
+    const backImg  = document.getElementById('lb-back');
+    if (scans.F) frontImg.src = URL.createObjectURL(scans.F);
+    if (scans.B) {
+      backImg.src = URL.createObjectURL(scans.B);
+      attachImportMagnifier(backImg);
+    }
   }
 
   lb.classList.add('open');
