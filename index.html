@@ -717,6 +717,11 @@
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
+    transition: aspect-ratio 0.15s;
+  }
+  /* Wide combined scan (front+back in one image) — expand container to fit */
+  .card-placeholder.combined-scan {
+    aspect-ratio: 5/2.5;
   }
 
   /* Scan carousel arrows */
@@ -2818,6 +2823,13 @@
     display: block;
     cursor: zoom-in;
     transition: opacity 0.2s;
+  }
+  /* Combined front+back scan — full width, natural aspect ratio */
+  .scan-img.scan-img-combined {
+    width: 100%;
+    aspect-ratio: unset;
+    object-fit: contain;
+    max-height: 60vh;
   }
   .scan-img:hover { opacity: 1; }
   .scan-img-label {
@@ -5511,7 +5523,11 @@ function _renderScan() {
   const url = _scanUrls[_scanIndex];
   if (existingImg) {
     existingImg.src = url;
-    if (typeof attachMagnifier === 'function') attachMagnifier(existingImg);
+    existingImg.onload = () => {
+      const ratio = existingImg.naturalWidth / (existingImg.naturalHeight || 1);
+      placeholder.classList.toggle('combined-scan', ratio > 1.5);
+      if (typeof attachMagnifier === 'function') attachMagnifier(existingImg);
+    };
   } else {
     const img = document.createElement('img');
     img.className = 'carousel-img';
@@ -5519,9 +5535,13 @@ function _renderScan() {
     img.alt = 'Scan ' + (_scanIndex + 1);
     img.onclick = () => window.open(url, '_blank');
     img.onerror = () => { img.style.display = 'none'; };
+    img.onload = () => {
+      const ratio = img.naturalWidth / (img.naturalHeight || 1);
+      placeholder.classList.toggle('combined-scan', ratio > 1.5);
+      if (typeof attachMagnifier === 'function') attachMagnifier(img);
+    };
     placeholder.insertBefore(img, placeholder.querySelector('.scan-arrow.left'));
     img.src = url;
-    if (typeof attachMagnifier === 'function') attachMagnifier(img);
   }
 
   if (prev) prev.disabled = _scanIndex === 0;
@@ -5581,13 +5601,23 @@ function _renderRawScan() {
   const existingImg = ph.querySelector('img.carousel-img');
   if (existingImg) {
     existingImg.src = url;
+    existingImg.onload = () => {
+      const ratio = existingImg.naturalWidth / (existingImg.naturalHeight || 1);
+      ph.classList.toggle('combined-scan', ratio > 1.5);
+      if (typeof attachMagnifier === 'function') attachMagnifier(existingImg);
+    };
   } else {
     const img = document.createElement('img');
     img.className = 'carousel-img';
-    img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;margin:auto;cursor:pointer;';
+    img.style.cssText = 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;margin:auto;cursor:crosshair;';
     img.alt = 'Raw scan';
     img.onclick = () => window.open(url, '_blank');
     img.onerror = () => { img.style.display = 'none'; };
+    img.onload = () => {
+      const ratio = img.naturalWidth / (img.naturalHeight || 1);
+      ph.classList.toggle('combined-scan', ratio > 1.5);
+      if (typeof attachMagnifier === 'function') attachMagnifier(img);
+    };
     ph.insertBefore(img, ph.querySelector('.scan-arrow.left'));
     img.src = url;
   }
@@ -6050,9 +6080,10 @@ function openSubmissionInModal(player, back, s, isFinest) {
 
   if (hasScans) {
     gridHTML += s.imgs.map((url, i) => `
-      <div>
+      <div id="scan-wrap-${i}">
         <img src="${url}" alt="${labels[i]||'Scan '+(i+1)}" class="scan-img"
           onclick="window.open(this.src,'_blank')"
+          onload="(function(img,wrap){var r=img.naturalWidth/(img.naturalHeight||1);if(r>1.5){img.classList.add('scan-img-combined');wrap.style.gridColumn='1/-1';}if(typeof attachMagnifier==='function')attachMagnifier(img);})(this,document.getElementById('scan-wrap-${i}'))"
           onerror="this.parentElement.innerHTML='<div class=\'scan-placeholder\'><div class=\'scan-placeholder-icon\'>⬚</div><div class=\'scan-placeholder-label\'>${labels[i]||'Scan '+(i+1)}</div></div>'">
         <div class="scan-img-label">${labels[i]||'Scan '+(i+1)}</div>
       </div>`).join('');
@@ -6902,9 +6933,10 @@ function openConfirmedModal(idx) {
       if (sub && sub.imgs && sub.imgs.length) {
         const labels = ['Front','Back','Detail','Reverse'];
         return sub.imgs.map((url,i) => `
-          <div>
+          <div id="cmod-scan-wrap-${i}">
             <img src="${url}" alt="${labels[i]||'Scan '+(i+1)}" class="scan-img"
               onclick="window.open(this.src,'_blank')"
+              onload="(function(img,wrap){var r=img.naturalWidth/(img.naturalHeight||1);if(r>1.5){img.classList.add('scan-img-combined');wrap.style.gridColumn='1/-1';}if(typeof attachMagnifier==='function')attachMagnifier(img);})(this,document.getElementById('cmod-scan-wrap-${i}'))"
               onerror="this.parentElement.innerHTML='<div class=\"scan-placeholder\"><div class=\"scan-placeholder-icon\">⬚</div><div class=\"scan-placeholder-label\">${labels[i]||'Scan '+(i+1)}</div></div>'">
             <div class="scan-img-label">${labels[i]||'Scan '+(i+1)}</div>
           </div>`).join('');
@@ -6947,13 +6979,16 @@ function openScanModal(id) {
   const labels = ['Front', 'Back', 'Front detail', 'Back detail', 'Full card', 'Provenance'];
   if (imgs.length) {
     imgs.forEach((url, i) => {
-      grid.innerHTML += `
-        <div>
-          <img src="${url}" alt="${labels[i]||'Scan '+(i+1)}" class="scan-img"
-            onclick="window.open(this.src,'_blank')"
-            onerror="this.parentElement.innerHTML='<div class=\'scan-placeholder\'><div class=\'scan-placeholder-icon\'>⬚</div><div class=\'scan-placeholder-label\'>${labels[i]||'Scan '+(i+1)}</div></div>'">
-          <div class="scan-img-label">${labels[i]||'Scan '+(i+1)}</div>
-        </div>`;
+      const wrapId = 'amod-scan-wrap-' + i + '-' + Date.now();
+      const div = document.createElement('div');
+      div.id = wrapId;
+      div.innerHTML = `
+        <img src="${url}" alt="${labels[i]||'Scan '+(i+1)}" class="scan-img"
+          onclick="window.open(this.src,'_blank')"
+          onload="(function(img,wrap){var r=img.naturalWidth/(img.naturalHeight||1);if(r>1.5){img.classList.add('scan-img-combined');wrap.style.gridColumn='1/-1';}if(typeof attachMagnifier==='function')attachMagnifier(img);})(this,this.parentElement)"
+          onerror="this.parentElement.innerHTML='<div class=\'scan-placeholder\'><div class=\'scan-placeholder-icon\'>⬚</div><div class=\'scan-placeholder-label\'>${labels[i]||'Scan '+(i+1)}</div></div>'">
+        <div class="scan-img-label">${labels[i]||'Scan '+(i+1)}</div>`;
+      grid.appendChild(div);
     });
   } else {
     for (let i = 0; i < c.scans; i++) {
