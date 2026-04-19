@@ -356,11 +356,11 @@
   <!-- Combined mode: single image full width -->
   <div id="lb-combined-mode" style="display:none;flex-direction:column;align-items:center;gap:0.5rem;">
     <div class="lightbox-scan" style="max-width:80vw;">
-      <img id="lb-combined" class="front-scan" alt="Front+Back Combined"
+      <img id="lb-combined" class="back-scan" alt="Front+Back Combined"
            style="max-height:85vh;max-width:80vw;object-fit:contain;"
            onclick="window.open(this.src,'_blank')">
       <div class="lightbox-label">Front + Back (Combined Scan)</div>
-      <div class="lightbox-hint">Click to open full size</div>
+      <div class="lightbox-hint">Hover to magnify · Click to open full size</div>
     </div>
   </div>
 </div>
@@ -1033,8 +1033,30 @@ async function commitSelected() {
         log(`↳ New combination created: ${row.player} / ${row.series}`, 'warn');
       }
 
-      // 3. Insert submission
+      // 3. Insert submission — with finest_status_at_submission pre-check
       const gn = (row.gradeNumeric && row.gradeNumeric > 0) ? row.gradeNumeric : gradeToNum(row.grade);
+
+      // Determine if this is a new finest or upgrade at time of import
+      let wasFinest    = false;
+      let finestStatus = null;
+      if (gn != null && gn >= 0) {
+        const { data: bestExisting } = await db
+          .from('submissions')
+          .select('grade_numeric')
+          .eq('combination_id', combo.id)
+          .eq('is_graded', true)
+          .eq('status', 'confirmed')
+          .not('grade_numeric', 'is', null)
+          .order('grade_numeric', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!bestExisting) {
+          wasFinest = true; finestStatus = 'new';
+        } else if (gn > bestExisting.grade_numeric) {
+          wasFinest = true; finestStatus = 'upgrade';
+        }
+      }
+
       const { data: sub, error: subErr } = await db.from('submissions').insert({
         combination_id:   combo.id,
         submitted_by:     ADMIN_USER_ID,
@@ -1047,6 +1069,8 @@ async function commitSelected() {
         cert_verified_at: new Date().toISOString(),
         cert_data:        JSON.stringify({ company:'PSA', cert:row.cert, grade:row.grade,
                             subject:row.psaSubject, variety:row.psaVariety, brand:row.psaBrand }),
+        was_finest_at_submission:    wasFinest,
+        finest_status_at_submission: finestStatus,
       }).select('id').single();
 
       if (subErr) {
@@ -1091,8 +1115,9 @@ async function commitSelected() {
         }
       }
 
-      const scanNote = scanRecords.length ? ` · ${scanRecords.length} scan(s) uploaded` : ' · no scans';
-      log(`✓ ${row.cert} — ${row.player} / ${row.series} — ${row.grade}${scanNote}`, 'ok');
+      const scanNote   = scanRecords.length ? ` · ${scanRecords.length} scan(s) uploaded` : ' · no scans';
+      const finestNote = finestStatus === 'new' ? ' · 🏆 Known Finest (New)' : finestStatus === 'upgrade' ? ' · ⬆ Known Finest (Upgrade)' : '';
+      log(`✓ ${row.cert} — ${row.player} / ${row.series} — ${row.grade}${scanNote}${finestNote}`, 'ok');
       updateRowBadgeDone(idx, 'badge-done', 'Committed');
       done++;
 
@@ -1155,7 +1180,10 @@ function openScanLightbox(cert) {
     // Combined scan mode
     splitMode.style.display    = 'none';
     combinedMode.style.display = 'flex';
-    document.getElementById('lb-combined').src = URL.createObjectURL(scans.C);
+    const combinedImg = document.getElementById('lb-combined');
+    combinedImg.src = URL.createObjectURL(scans.C);
+    combinedImg.className = 'back-scan'; // crosshair cursor signals magnifier
+    attachImportMagnifier(combinedImg);
   } else {
     // Separate front + back mode
     splitMode.style.display    = 'flex';
