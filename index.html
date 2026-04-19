@@ -6094,14 +6094,20 @@ function openSubmissionInModal(player, back, s, isFinest) {
   }
 
   if (hasScans) {
-    gridHTML += s.imgs.map((url, i) => `
-      <div id="scan-wrap-${i}">
-        <img src="${url}" alt="${labels[i]||'Scan '+(i+1)}" class="scan-img"
+    gridHTML += s.imgs.map((url, i) => {
+      const isCombinedScan = s.isCombined && s.imgs.length === 1;
+      const wrapClass  = isCombinedScan ? 'scan-wrap-combined' : '';
+      const imgClass   = isCombinedScan ? ' scan-img-combined'  : '';
+      const dispLabel  = (s.imgLabels && s.imgLabels[i]) || labels[i] || ('Scan ' + (i+1));
+      return `
+      <div id="scan-wrap-${i}" class="${wrapClass}">
+        <img src="${url}" alt="${dispLabel}" class="scan-img${imgClass}"
           onclick="window.open(this.src,'_blank')"
-          onload="(function(img,wrap){var r=img.naturalWidth/(img.naturalHeight||1);if(r>1.5){img.classList.add('scan-img-combined');wrap.classList.add('scan-wrap-combined');}if(typeof attachMagnifier==='function')attachMagnifier(img);})(this,document.getElementById('scan-wrap-${i}'))"
-          onerror="this.parentElement.innerHTML='<div class=\'scan-placeholder\'><div class=\'scan-placeholder-icon\'>⬚</div><div class=\'scan-placeholder-label\'>${labels[i]||'Scan '+(i+1)}</div></div>'">
-        <div class="scan-img-label">${labels[i]||'Scan '+(i+1)}</div>
-      </div>`).join('');
+          onload="if(typeof attachMagnifier==='function')attachMagnifier(this)"
+          onerror="this.parentElement.innerHTML='<div class=\'scan-placeholder\'><div class=\'scan-placeholder-icon\'>⬚</div><div class=\'scan-placeholder-label\'>${dispLabel}</div></div>'">
+        <div class="scan-img-label">${dispLabel}</div>
+      </div>`;
+    }).join('');
   } else {
     gridHTML += `<div style="grid-column:1/-1;font-family:'Courier Prime',monospace;font-size:0.72rem;color:var(--text-muted);font-style:italic;padding:1rem 0;">
       No scans on file for this submission. The cert has been recorded but no images were uploaded.
@@ -7078,7 +7084,9 @@ async function loadRecentConfirmedFromSupabase(fromOffset = 0) {
     const converted = data.map(s => {
       const daysAgo = Math.floor((now - new Date(s.submitted_at)) / 86400000);
       const sortedScans = (s.scans || []).sort((a, b) => a.sort_order - b.sort_order);
-      const imgs = sortedScans.map(sc => SUPABASE_URL + '/storage/v1/object/public/scans/' + sc.storage_path);
+      const imgs       = sortedScans.map(sc => SUPABASE_URL + '/storage/v1/object/public/scans/' + sc.storage_path);
+      const imgLabels  = sortedScans.map(sc => sc.label || null);
+      const isCombined = sortedScans.some(sc => sc.label === 'Front+Back (Combined)');
       return {
         player:    s.combinations?.players?.name || '—',
         back:      s.combinations?.backs?.name   || '—',
@@ -7092,6 +7100,8 @@ async function loadRecentConfirmedFromSupabase(fromOffset = 0) {
         finestStatus: s.finest_status_at_submission || null,
         _submissionId: s.id,
         imgs,
+        imgLabels,
+        isCombined,
       };
     });
 
@@ -7143,7 +7153,9 @@ async function loadAttestedFromSupabase(fromOffset = 0) {
 
     const converted = data.map(s => {
       const sortedScans = (s.scans || []).sort((a, b) => a.sort_order - b.sort_order);
-      const imgs = sortedScans.map(sc => SUPABASE_URL + '/storage/v1/object/public/scans/' + sc.storage_path);
+      const imgs       = sortedScans.map(sc => SUPABASE_URL + '/storage/v1/object/public/scans/' + sc.storage_path);
+      const imgLabels  = sortedScans.map(sc => sc.label || null);
+      const isCombined = sortedScans.some(sc => sc.label === 'Front+Back (Combined)');
       return {
         id:        'db_' + s.id,
         player:    s.combinations?.players?.name || '—',
@@ -7158,6 +7170,8 @@ async function loadAttestedFromSupabase(fromOffset = 0) {
         finestStatus: s.finest_status_at_submission || null,
         _submissionId: s.id,
         imgs,
+        imgLabels,
+        isCombined,
       };
     });
 
