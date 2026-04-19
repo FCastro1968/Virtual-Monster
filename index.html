@@ -9135,6 +9135,7 @@ async function initGallery() {
       const imgUrl  = scan
         ? `${SUPABASE_URL}/storage/v1/object/public/scans/${scan.storage_path}`
         : null;
+      const isCombined = scan?.label === 'Front+Back (Combined)';
       return {
         id:        s.id,
         player,
@@ -9145,6 +9146,7 @@ async function initGallery() {
         cert:      s.cert_number || null,
         collector: submitterHandle(s, null),
         imgUrl,
+        isCombined,
         gradeNum:  s.grade_numeric ?? -1,
       };
     });
@@ -9243,12 +9245,11 @@ function galleryLoadMore() {
 
     const imgHtml = g.imgUrl
       ? `<img src="${g.imgUrl}" alt="${escapeHtml(g.player)}" loading="lazy"
-             onload="if(this.naturalWidth/(this.naturalHeight||1)>1.5){this.parentElement.classList.add('combined');}"
              onerror="this.parentElement.innerHTML='<div class=\'gallery-no-scan\'>[ no scan on file ]</div>'">`
       : `<div class="gallery-no-scan">[ no scan<br>on file ]</div>`;
 
     card.innerHTML = `
-      <div class="gallery-card-img">
+      <div class="gallery-card-img${g.isCombined ? ' combined' : ''}">
         ${g.isHof ? '<span class="gallery-hof-star">★</span>' : ''}
         ${imgHtml}
       </div>
@@ -9393,6 +9394,7 @@ async function initRawGallery() {
       const imgUrl  = scan
         ? `${SUPABASE_URL}/storage/v1/object/public/scans/${scan.storage_path}`
         : null;
+      const isCombined = scan?.label === 'Front+Back (Combined)';
       return {
         id:        s.id,
         player,
@@ -9401,6 +9403,7 @@ async function initRawGallery() {
         votes:     s._votes ?? 0,
         submitter: submitterHandle(s, null),
         imgUrl,
+        isCombined,
       };
     });
 
@@ -9504,7 +9507,6 @@ function rawGalleryLoadMore() {
 
     const imgHtml = g.imgUrl
       ? `<img src="${g.imgUrl}" alt="${escapeHtml(g.player)}" loading="lazy"
-             onload="if(this.naturalWidth/(this.naturalHeight||1)>1.5){this.parentElement.classList.add('combined');}"
              onerror="this.parentElement.innerHTML='<div class=\\'gallery-no-scan\\'>[ no scan on file ]</div>'">`
       : `<div class="gallery-no-scan">[ no scan<br>on file ]</div>`;
 
@@ -9513,7 +9515,7 @@ function rawGalleryLoadMore() {
       : 'unvoted';
 
     card.innerHTML = `
-      <div class="gallery-card-img">
+      <div class="gallery-card-img${g.isCombined ? ' combined' : ''}">
         ${g.isHof ? '<span class="gallery-hof-star">★</span>' : ''}
         ${imgHtml}
       </div>
