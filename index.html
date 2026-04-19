@@ -1324,9 +1324,16 @@
     width: 100%; aspect-ratio: 3/4; background: var(--faded);
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; position: relative;
+    transition: aspect-ratio 0.1s;
+  }
+  .gallery-card-img.combined {
+    aspect-ratio: 2/1.2;
   }
   .gallery-card-img img {
     width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .gallery-card-img.combined img {
+    object-fit: contain;
   }
   .gallery-card-img .gallery-no-scan {
     font-family: 'Courier Prime', monospace; font-size: 0.6rem;
@@ -9236,6 +9243,7 @@ function galleryLoadMore() {
 
     const imgHtml = g.imgUrl
       ? `<img src="${g.imgUrl}" alt="${escapeHtml(g.player)}" loading="lazy"
+             onload="if(this.naturalWidth/(this.naturalHeight||1)>1.5){this.parentElement.classList.add('combined');}"
              onerror="this.parentElement.innerHTML='<div class=\'gallery-no-scan\'>[ no scan on file ]</div>'">`
       : `<div class="gallery-no-scan">[ no scan<br>on file ]</div>`;
 
@@ -9496,6 +9504,7 @@ function rawGalleryLoadMore() {
 
     const imgHtml = g.imgUrl
       ? `<img src="${g.imgUrl}" alt="${escapeHtml(g.player)}" loading="lazy"
+             onload="if(this.naturalWidth/(this.naturalHeight||1)>1.5){this.parentElement.classList.add('combined');}"
              onerror="this.parentElement.innerHTML='<div class=\\'gallery-no-scan\\'>[ no scan on file ]</div>'">`
       : `<div class="gallery-no-scan">[ no scan<br>on file ]</div>`;
 
