@@ -1335,6 +1335,9 @@
   .gallery-card-img.combined img {
     object-fit: contain;
   }
+  .gallery-card.combined-card {
+    grid-column: span 2;
+  }
   .gallery-card-img .gallery-no-scan {
     font-family: 'Courier Prime', monospace; font-size: 0.6rem;
     color: var(--text-muted); text-align: center; padding: 1rem;
@@ -7055,7 +7058,7 @@ async function loadRecentConfirmedFromSupabase(fromOffset = 0) {
           players ( name ),
           backs ( name )
         ),
-        scans ( storage_path, sort_order )
+        scans ( storage_path, label, sort_order )
       `)
       .eq('status', 'confirmed')
       .order('submitted_at', { ascending: false })
@@ -7120,7 +7123,7 @@ async function loadAttestedFromSupabase(fromOffset = 0) {
           players ( name ),
           backs ( name )
         ),
-        scans ( storage_path, sort_order )
+        scans ( storage_path, label, sort_order )
       `)
       .eq('is_graded', false)
       .not('status', 'in', '("pending","rejected","removed")')
@@ -9117,7 +9120,7 @@ async function initGallery() {
           backs    ( name )
         ),
         users!submitted_by ( handle ),
-        scans ( storage_path, sort_order )
+        scans ( storage_path, label, sort_order )
       `)
       .eq('is_finest_graded', true)
       .eq('status', 'confirmed')
@@ -9240,7 +9243,7 @@ function galleryLoadMore() {
 
   slice.forEach(g => {
     const card = document.createElement('div');
-    card.className = 'gallery-card';
+    card.className = 'gallery-card' + (g.isCombined ? ' combined-card' : '');
     card.title = `${g.player} / ${g.back}`;
 
     const imgHtml = g.imgUrl
@@ -9331,7 +9334,7 @@ async function initRawGallery() {
           backs    ( name )
         ),
         users!submitted_by ( handle ),
-        scans ( storage_path, sort_order )
+        scans ( storage_path, label, sort_order )
       `)
       .is('grade', null)
       .is('cert_number', null)
@@ -9502,7 +9505,7 @@ function rawGalleryLoadMore() {
 
   slice.forEach(g => {
     const card = document.createElement('div');
-    card.className = 'gallery-card';
+    card.className = 'gallery-card' + (g.isCombined ? ' combined-card' : '');
     card.title = `${g.player} / ${g.back}`;
 
     const imgHtml = g.imgUrl
